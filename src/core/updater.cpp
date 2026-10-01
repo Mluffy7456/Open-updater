@@ -44,7 +44,8 @@ std::wstring widen(const std::string& value) {
 
 void download_windows(
     const std::string& url,
-    const std::filesystem::path& destination) {
+    const std::filesystem::path& destination,
+    const HttpHeaders& headers) {
 
     const auto wide_url = widen(url);
 
@@ -113,10 +114,22 @@ void download_windows(
         throw std::runtime_error("Failed to create HTTP request.");
     }
 
+    std::wstring additional_headers;
+    for (const auto& [name, value] : headers) {
+        additional_headers += widen(name + ": " + value);
+        additional_headers += L"\r\n";
+    }
+
+    const LPCWSTR header_data =
+        additional_headers.empty() ? WINHTTP_NO_ADDITIONAL_HEADERS
+                                    : additional_headers.c_str();
+
     if (!WinHttpSendRequest(
             request,
-            WINHTTP_NO_ADDITIONAL_HEADERS,
-            0,
+            header_data,
+            additional_headers.empty()
+                ? 0
+                : static_cast<DWORD>(additional_headers.size()),
             WINHTTP_NO_REQUEST_DATA,
             0,
             0,
@@ -192,7 +205,8 @@ void download_windows(
 
 void Downloader::download(
     const std::string& url,
-    const std::filesystem::path& destination) {
+    const std::filesystem::path& destination,
+    const HttpHeaders& headers) {
 
     if (url.empty())
         throw std::runtime_error("Download URL cannot be empty.");
@@ -204,7 +218,7 @@ void Downloader::download(
         std::filesystem::create_directories(destination.parent_path());
 
 #ifdef _WIN32
-    download_windows(url, destination);
+    download_windows(url, destination, headers);
 #else
     CURL* curl = curl_easy_init();
     if (!curl)
@@ -218,6 +232,15 @@ void Downloader::download(
     }
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+    curl_slist* request_headers = nullptr;
+    for (const auto& [name, value] : headers) {
+        const auto header = name + ": " + value;
+        request_headers = curl_slist_append(request_headers, header.c_str());
+    }
+
+    if (request_headers)
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, request_headers);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_FAILONERROR, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
@@ -229,6 +252,8 @@ void Downloader::download(
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &output);
 
     const auto result = curl_easy_perform(curl);
+    if (request_headers)
+        curl_slist_free_all(request_headers);
     curl_easy_cleanup(curl);
 
     if (result != CURLE_OK)
