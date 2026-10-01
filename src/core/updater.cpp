@@ -455,6 +455,119 @@ std::filesystem::path install_package(
 
 } // namespace
 
+
+std::vector<UpdateReport> Updater::update_selected(
+    const SelectedUpdateRequest& request) {
+
+    if (request.updates.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "No available updates were supplied.");
+
+    if (request.selection.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "No updates were selected.");
+
+    if (request.destination.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "Update destination cannot be empty.");
+
+    std::vector<const AvailableUpdate*> selected_updates;
+    selected_updates.reserve(request.selection.components.size());
+
+    for (const auto& component : request.selection.components) {
+        const auto match = std::find_if(
+            request.updates.begin(),
+            request.updates.end(),
+            [&](const AvailableUpdate& update) {
+                return update.component == component;
+            });
+
+        if (match == request.updates.end())
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Selected update is not present in discovery results: " +
+                component);
+
+        selected_updates.push_back(&*match);
+    }
+
+    std::vector<UpdateReport> reports;
+    reports.reserve(selected_updates.size());
+
+    const auto staging_directory =
+        request.destination / ".openupdater" / "staging";
+    std::filesystem::create_directories(staging_directory);
+
+    for (const auto* update : selected_updates) {
+        const auto stamp =
+            std::chrono::high_resolution_clock::now()
+                .time_since_epoch().count();
+
+        const auto package_path =
+            staging_directory /
+            (update->asset + "." + std::to_string(stamp) + ".download");
+
+        const auto digest = update->sha256;
+
+        HttpHeaders headers(
+            request.options.headers.begin(),
+            request.options.headers.end());
+
+        try {
+            Downloader::download(
+                update->download_url,
+                package_path,
+                headers);
+
+            if (request.options.verify_download && !digest.empty() &&
+                !verify_sha256(package_path, digest)) {
+                std::error_code cleanup_error;
+                std::filesystem::remove(package_path, cleanup_error);
+                throw UpdateError(
+                    ErrorCode::VerificationFailed,
+                    "SHA-256 verification failed for selected update: " +
+                    update->component);
+            }
+
+            const auto install_digest =
+                request.options.verify_download ? digest : std::string{};
+
+            const auto backup = install_package(
+                package_path,
+                request.destination,
+                install_digest,
+                request.options);
+
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+
+            reports.push_back({
+                update->current,
+                update->available,
+                UpdateState::UpdateAvailable,
+                request.destination / update->asset,
+                backup
+            });
+        } catch (const UpdateError&) {
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+            throw;
+        } catch (const std::exception& error) {
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+            throw UpdateError(
+                ErrorCode::InstallationFailed,
+                "Failed to install selected update " +
+                update->component + ": " + error.what());
+        }
+    }
+
+    return reports;
+}
+
 std::filesystem::path Updater::install(
     const std::filesystem::path& package,
     const std::filesystem::path& destination,
