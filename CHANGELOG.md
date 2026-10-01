@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.2.0] - 2026-10-01
+
+### Added
+- Universal provider-based update manager API.
+- Unified update model with application, programming, runtime and driver categories.
+- WinGet provider for installed Windows applications and developer tools.
+- Windows Update Agent provider for applicable driver updates.
+- Windows driver discovery through the native WUA API.
+- Selective checkbox-based update installation in the Qt GUI.
+- Select-all and deselect-all controls.
+- Provider diagnostics when a source cannot be scanned.
+- Universal update manager unit tests.
+
+### Changed
+- Qt GUI is now focused on scanning and selectively installing updates from multiple providers.
+- Public API and project version updated to 2.2.0.
+
 ## [2.1.0] - 2026-10-01
 
 ### Added
