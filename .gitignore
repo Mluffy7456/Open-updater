@@ -1,0 +1,8 @@
+build/
+.vscode/
+.idea/
+*.user
+*.suo
+*.vcxproj
+*.vcxproj.filters
+.DS_Store
