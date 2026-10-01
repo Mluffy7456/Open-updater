@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0] - 2026-10-01
+
+### Added
+- Core-level update selection API.
+- `UpdateSelection` with select, deselect, clear and select-all operations.
+- `SelectedUpdateRequest` for selective installation.
+- `Updater::update_selected(...)` for installing only explicitly selected discovered updates.
+- Tests for selection behavior and validation.
+
+### Changed
+- Public API and project version updated to 1.3.0.
+
+
 ## [1.2.0] - 2026-10-01
 
 ### Added
