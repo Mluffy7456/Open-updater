@@ -146,15 +146,23 @@ private:
         });
 
         watcher->setFuture(QtConcurrent::run([] {
-            const openupdater::Version current(kVersion);
-            if (!current.valid())
-                throw std::runtime_error("Application version is invalid.");
+            try {
+                const openupdater::Version current(kVersion);
+                if (!current.valid())
+                    throw std::runtime_error("Application version is invalid.");
 
-            const auto release =
-                openupdater::GitHubReleasesProvider::latest_compatible(
-                    kRepository, kComponent);
+                const auto release =
+                    openupdater::GitHubReleasesProvider::latest_compatible(
+                        kRepository, kComponent);
 
-            return CheckResult{current, release};
+                return CheckResult{current, release};
+            } catch (const std::exception& error) {
+                throw std::runtime_error(
+                    std::string("Update check failed: ") + error.what());
+            } catch (...) {
+                throw std::runtime_error(
+                    "Update check failed: an unknown C++ exception was raised.");
+            }
         }));
     }
 
