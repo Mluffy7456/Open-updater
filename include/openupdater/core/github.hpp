@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <string>
+#include <vector>
 
 namespace openupdater {
 
@@ -26,6 +27,13 @@ public:
 
     // Select an asset using OpenUpdater's platform/architecture naming
     // convention: <component>-<platform>-<architecture>.<extension>.
+    [[nodiscard]] static std::vector<AvailableUpdate> discover(
+        const std::string& repository,
+        const std::vector<UpdateTarget>& targets,
+        Platform platform = current_platform(),
+        Architecture architecture = current_architecture(),
+        const ApiHttpHeaders& headers = {});
+
     [[nodiscard]] static GitHubRelease latest_compatible(
         const std::string& repository,
         const std::string& component,
