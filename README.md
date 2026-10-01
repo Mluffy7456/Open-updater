@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v1.1.0 — Multi-platform asset selection
+v1.2.0 — Update discovery
 
 Features:
 - semantic numeric version comparison;
@@ -25,8 +25,7 @@ Features:
 - configurable GitHub HTTP headers;
 - runtime platform and architecture detection;
 - platform/architecture-aware GitHub release asset selection;
-- runtime platform and architecture detection;
-- platform/architecture-aware GitHub release asset selection;
+- multi-component update discovery without installation;
 - asynchronous GUI operations;
 - local package installation;
 - command-line interface;
@@ -122,27 +121,26 @@ OpenUpdater 1.1 can detect the host platform and CPU architecture. Compatible Gi
 
 Examples: `DemoApp-windows-x64.zip`, `DemoApp-linux-x64.tar.gz`, `DemoApp-linux-arm64.tar.gz`, `DemoApp-macos-arm64.zip`.
 
-Use `GitHubReleasesProvider::latest_compatible(...)` to select the compatible asset from the latest GitHub release. If multiple compatible assets exist for the same component/platform/architecture, selection fails instead of guessing. Exact selection through `latest(...)` remains available.
+Use `GitHubReleasesProvider::latest_compatible(...)` to select the compatible asset. If multiple compatible assets exist for the same component/platform/architecture, selection fails instead of guessing.
 
-### Multi-platform assets
+### Update discovery
 
-OpenUpdater 1.1 can detect the host platform and CPU architecture:
+OpenUpdater 1.2 separates **checking** from **installing**. The core API can check several components in one request and returns only components for which a compatible asset exists and the release version is newer than the installed version.
 
-    const auto platform = openupdater::current_platform();
-    const auto architecture = openupdater::current_architecture();
+    openupdater::UpdateDiscoveryRequest request{
+        "owner/repository",
+        {
+            {"Core", openupdater::Version("1.4.0")},
+            {"GUI", openupdater::Version("1.2.0")}
+        }
+    };
 
-Compatible GitHub assets use the naming convention:
+    const auto updates =
+        openupdater::Updater::discover_updates(request);
 
-    <component>-<platform>-<architecture>.<extension>
+Each `AvailableUpdate` contains the component, current and available versions, selected asset, platform, architecture, SHA-256 digest when supplied by GitHub, and download URL.
 
-Examples:
-
-    DemoApp-windows-x64.zip
-    DemoApp-linux-x64.tar.gz
-    DemoApp-linux-arm64.tar.gz
-    DemoApp-macos-arm64.zip
-
-The core API can select the compatible asset from the latest GitHub release with `GitHubReleasesProvider::latest_compatible(...)`. If multiple compatible assets exist for the same component/platform/architecture, selection fails instead of guessing. Exact asset selection through `latest(...)` remains available for callers that need explicit control.
+Nothing is downloaded or installed during discovery. This API is the foundation for the next selection stage, where the caller will choose which discovered components to install.
 
 Exit codes for update:
 - 0 — update installed;
@@ -171,7 +169,10 @@ Example:
 - 0.6.0 — GUI
 - 1.0.0 — Stable updater API
 - 1.1.0 — Multi-platform asset detection and selection
-- 1.1.0 — Multi-platform asset detection and selection
+- 1.2.0 — Update discovery
+- 1.3.0 — Update selection and selective installation
+- 1.4.0 — Digital package signatures
+- 2.0.0 — Full update manager
 
 ## License
 
