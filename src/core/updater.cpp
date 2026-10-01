@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <filesystem>
+#include <algorithm>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -267,6 +268,41 @@ void Downloader::download(
 #endif
 }
 
+
+
+void UpdateSelection::select(const std::string& component) {
+    if (component.empty())
+        throw std::invalid_argument("Update component name cannot be empty.");
+
+    if (!selected(component))
+        components.push_back(component);
+}
+
+void UpdateSelection::deselect(const std::string& component) {
+    components.erase(
+        std::remove(components.begin(), components.end(), component),
+        components.end());
+}
+
+void UpdateSelection::clear() {
+    components.clear();
+}
+
+void UpdateSelection::select_all(
+    const std::vector<AvailableUpdate>& updates) {
+    components.clear();
+    for (const auto& update : updates)
+        select(update.component);
+}
+
+bool UpdateSelection::selected(const std::string& component) const noexcept {
+    return std::find(components.begin(), components.end(), component) !=
+        components.end();
+}
+
+bool UpdateSelection::empty() const noexcept {
+    return components.empty();
+}
 
 std::vector<AvailableUpdate> Updater::discover_updates(
     const UpdateDiscoveryRequest& request) {
