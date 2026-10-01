@@ -22,10 +22,21 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+
+      - name: Install Windows dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: vcpkg install openssl:x64-windows
 
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        shell: pwsh
+        run: |
+          if ($env:RUNNER_OS -eq "Windows") {
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+          } else {
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          }
 
       - name: Build
         run: cmake --build build --config Release --parallel
