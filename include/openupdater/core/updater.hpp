@@ -36,6 +36,9 @@ public:
 
 class Updater {
 public:
+    [[nodiscard]] static std::vector<AvailableUpdate> discover_updates(
+        const UpdateDiscoveryRequest& request);
+
     [[nodiscard]] static UpdateCheck check(
         const Version& current,
         const Manifest& manifest);
