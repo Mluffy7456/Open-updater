@@ -83,7 +83,7 @@ jobs:
             throw "Installer did not install libcrypto-3-x64.dll."
           }
 
-          & $installedExe --help | Out-Null
+          & $installedExe version 2.0.0 | Out-Null
           if ($LASTEXITCODE -ne 0) {
             throw "Installed OpenUpdater failed to start."
           }
