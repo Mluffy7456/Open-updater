@@ -22,7 +22,7 @@ namespace {
 class MainWindow final : public QMainWindow {
 public:
     MainWindow() {
-        setWindowTitle("OpenUpdater 1.1.0");
+        setWindowTitle("OpenUpdater 2.0.0");
         resize(760, 520);
 
         auto* central = new QWidget(this);
