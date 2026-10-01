@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v1.0.0 — Stable updater API
+v1.1.0 — Multi-platform asset selection
 
 Features:
 - semantic numeric version comparison;
@@ -23,6 +23,8 @@ Features:
 - typed updater errors via UpdateError;
 - configurable backup, rollback and verification policy;
 - configurable GitHub HTTP headers;
+- runtime platform and architecture detection;
+- platform/architecture-aware GitHub release asset selection;
 - asynchronous GUI operations;
 - local package installation;
 - command-line interface;
@@ -112,6 +114,26 @@ The request defaults to backup, automatic rollback, and digest verification when
 
 See `docs/API.md` for the stable API contract and compatibility notes.
 
+### Multi-platform assets
+
+OpenUpdater 1.1 can detect the host platform and CPU architecture:
+
+    const auto platform = openupdater::current_platform();
+    const auto architecture = openupdater::current_architecture();
+
+Compatible GitHub assets use the naming convention:
+
+    <component>-<platform>-<architecture>.<extension>
+
+Examples:
+
+    DemoApp-windows-x64.zip
+    DemoApp-linux-x64.tar.gz
+    DemoApp-linux-arm64.tar.gz
+    DemoApp-macos-arm64.zip
+
+The core API can select the compatible asset from the latest GitHub release with `GitHubReleasesProvider::latest_compatible(...)`. If multiple compatible assets exist for the same component/platform/architecture, selection fails instead of guessing. Exact asset selection through `latest(...)` remains available for callers that need explicit control.
+
 Exit codes for update:
 - 0 — update installed;
 - 10 — no update required;
@@ -138,6 +160,7 @@ Example:
 - 0.5.0 — Silent/background update
 - 0.6.0 — GUI
 - 1.0.0 — Stable updater API
+- 1.1.0 — Multi-platform asset detection and selection
 
 ## License
 
