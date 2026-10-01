@@ -13,9 +13,9 @@
 namespace openupdater {
 
 inline constexpr int API_VERSION_MAJOR = 2;
-inline constexpr int API_VERSION_MINOR = 1;
+inline constexpr int API_VERSION_MINOR = 2;
 inline constexpr int API_VERSION_PATCH = 0;
-inline constexpr const char* API_VERSION = "2.1.0";
+inline constexpr const char* API_VERSION = "2.2.0";
 
 enum class UpdateState {
     UpToDate,
