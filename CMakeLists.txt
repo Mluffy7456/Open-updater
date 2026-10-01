@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 0.1.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT WIN32)
+    find_package(CURL REQUIRED)
+endif()
 
 add_library(openupdater_core
     src/core/version.cpp
@@ -12,6 +16,12 @@ add_library(openupdater_core
 )
 
 target_include_directories(openupdater_core PUBLIC include)
+
+if(WIN32)
+    target_link_libraries(openupdater_core PRIVATE winhttp)
+else()
+    target_link_libraries(openupdater_core PRIVATE CURL::libcurl)
+endif()
 
 if(MSVC)
     target_compile_options(openupdater_core PRIVATE /W4 /permissive-)
