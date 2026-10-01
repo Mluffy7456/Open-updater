@@ -216,7 +216,7 @@ GitHubRelease GitHubReleasesProvider::latest(
         HttpHeaders headers{
             {"Accept", "application/vnd.github+json"},
             {"X-GitHub-Api-Version", "2026-03-10"},
-            {"User-Agent", "OpenUpdater/1.1"}};
+            {"User-Agent", "OpenUpdater/1.4"}};
         headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
 
         Downloader::download(api_url, metadata_path, headers);
@@ -308,7 +308,7 @@ std::vector<AvailableUpdate> GitHubReleasesProvider::discover(
         HttpHeaders headers{
             {"Accept", "application/vnd.github+json"},
             {"X-GitHub-Api-Version", "2026-03-10"},
-            {"User-Agent", "OpenUpdater/1.2"}};
+            {"User-Agent", "OpenUpdater/1.4"}};
         headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
 
         Downloader::download(api_url, metadata_path, headers);
@@ -420,7 +420,7 @@ GitHubRelease GitHubReleasesProvider::latest_compatible(
         HttpHeaders headers{
             {"Accept", "application/vnd.github+json"},
             {"X-GitHub-Api-Version", "2026-03-10"},
-            {"User-Agent", "OpenUpdater/1.1"}};
+            {"User-Agent", "OpenUpdater/1.4"}};
         headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
 
         Downloader::download(api_url, metadata_path, headers);
@@ -502,7 +502,7 @@ GitHubRelease GitHubReleasesProvider::download_latest(
 
     HttpHeaders headers{
         {"Accept", "application/octet-stream"},
-        {"User-Agent", "OpenUpdater/1.2"}};
+        {"User-Agent", "OpenUpdater/1.4"}};
     headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
     Downloader::download(release.download_url, destination, headers);
 
