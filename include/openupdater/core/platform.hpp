@@ -24,7 +24,7 @@ enum class Architecture {
 [[nodiscard]] Architecture current_architecture() noexcept;
 
 [[nodiscard]] std::string_view platform_name(Platform platform) noexcept;
-[[nodiscard]] std::string_view architecture_name(Architecture architecture) noexcept;
+[[nodiscard]] std::string_view architecture_name(Architecture architecture);
 
 // OpenUpdater asset naming convention:
 //   <component>-<platform>-<architecture>.<extension>
