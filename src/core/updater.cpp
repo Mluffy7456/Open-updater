@@ -2,6 +2,7 @@
 
 #include "openupdater/core/backup.hpp"
 #include "openupdater/core/github.hpp"
+#include "openupdater/core/error.hpp"
 
 #include <array>
 #include <chrono>
@@ -72,7 +73,7 @@ void download_windows(
     }
 
     HINTERNET session = WinHttpOpen(
-        L"OpenUpdater/0.5.0",
+        L"OpenUpdater/1.0.0",
         WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
         WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS,
@@ -276,10 +277,13 @@ UpdateCheck Updater::check(const Version& current, const Manifest& manifest) {
     return {current, manifest.version, UpdateState::UpToDate};
 }
 
-std::filesystem::path Updater::install(
+namespace {
+
+std::filesystem::path install_package(
     const std::filesystem::path& package,
     const std::filesystem::path& destination,
-    const std::string& expected_sha256) {
+    const std::string& expected_sha256,
+    const UpdateOptions& options) {
 
     if (!std::filesystem::exists(package))
         throw std::runtime_error("Package does not exist: " + package.string());
@@ -317,7 +321,7 @@ std::filesystem::path Updater::install(
     bool has_backup = false;
 
     try {
-        if (std::filesystem::exists(target)) {
+        if (options.backup_existing && std::filesystem::exists(target)) {
             backup = BackupManager::create(target, backup_directory);
             has_backup = true;
         }
@@ -337,7 +341,7 @@ std::filesystem::path Updater::install(
         std::error_code cleanup_error;
         std::filesystem::remove(staging, cleanup_error);
 
-        if (has_backup) {
+        if (has_backup && options.automatic_rollback) {
             try {
                 BackupManager::rollback(backup.backup, target);
             } catch (const std::exception& rollback_error) {
@@ -349,6 +353,20 @@ std::filesystem::path Updater::install(
 
         throw;
     }
+}
+
+} // namespace
+
+std::filesystem::path Updater::install(
+    const std::filesystem::path& package,
+    const std::filesystem::path& destination,
+    const std::string& expected_sha256) {
+
+    return install_package(
+        package,
+        destination,
+        expected_sha256,
+        UpdateOptions{});
 }
 
 UpdateResult Updater::update_from_github(
@@ -403,6 +421,114 @@ UpdateResult Updater::update_from_github(
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
         throw;
+    }
+}
+
+UpdateReport Updater::update(const UpdateRequest& request) {
+    if (!request.current.valid())
+        throw UpdateError(
+            ErrorCode::InvalidVersion,
+            "Current version is invalid.");
+
+    if (request.repository.empty() ||
+        request.repository.find('/') == std::string::npos) {
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "GitHub repository must use the owner/repository format.");
+    }
+
+    if (request.asset_name.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "GitHub asset name cannot be empty.");
+
+    if (request.destination.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "Update destination cannot be empty.");
+
+    GitHubRelease release;
+    try {
+        release = GitHubReleasesProvider::latest(
+            request.repository,
+            request.asset_name,
+            request.options.headers);
+    } catch (const std::exception& error) {
+        throw UpdateError(
+            ErrorCode::UpdateCheckFailed,
+            error.what());
+    }
+
+    if (release.version <= request.current) {
+        return {
+            request.current,
+            release.version,
+            UpdateState::UpToDate,
+            {},
+            {}
+        };
+    }
+
+    const auto staging_directory =
+        request.destination / ".openupdater" / "staging";
+    std::filesystem::create_directories(staging_directory);
+
+    const auto stamp =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const auto package_path =
+        staging_directory /
+        (request.asset_name + "." + std::to_string(stamp) + ".download");
+
+    const auto digest = request.expected_sha256.empty()
+        ? release.sha256
+        : request.expected_sha256;
+
+    try {
+        HttpHeaders headers(
+            request.options.headers.begin(),
+            request.options.headers.end());
+
+        Downloader::download(
+            release.download_url,
+            package_path,
+            headers);
+
+        if (request.options.verify_download && !digest.empty() &&
+            !verify_sha256(package_path, digest)) {
+            throw UpdateError(
+                ErrorCode::VerificationFailed,
+                "Downloaded GitHub asset SHA-256 verification failed.");
+        }
+
+        const auto install_digest =
+            request.options.verify_download ? digest : std::string{};
+
+        const auto backup = install_package(
+            package_path,
+            request.destination,
+            install_digest,
+            request.options);
+
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+
+        return {
+            request.current,
+            release.version,
+            UpdateState::UpdateAvailable,
+            request.destination / request.asset_name,
+            backup
+        };
+    } catch (const UpdateError&) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+        throw;
+    } catch (const std::exception& error) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+        throw UpdateError(
+            ErrorCode::InstallationFailed,
+            error.what());
     }
 }
 
