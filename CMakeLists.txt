@@ -48,7 +48,7 @@ target_link_libraries(openupdater_cli PRIVATE openupdater_core)
 set_target_properties(openupdater_cli PROPERTIES OUTPUT_NAME "openupdater-cli")
 
 if(OPENUPDATER_BUILD_GUI)
-    find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent Svg)
 
     add_executable(openupdater
         src/gui/main.cpp
@@ -58,6 +58,7 @@ if(OPENUPDATER_BUILD_GUI)
         openupdater_core
         Qt6::Widgets
         Qt6::Concurrent
+        Qt6::Svg
     )
 
     if(WIN32)
