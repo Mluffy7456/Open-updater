@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 1.3.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 1.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,6 +11,8 @@ if(NOT WIN32)
     find_package(CURL REQUIRED)
 endif()
 
+find_package(OpenSSL 1.1.1 REQUIRED COMPONENTS Crypto)
+
 add_library(openupdater_core
     src/core/version.cpp
     src/core/manifest.cpp
@@ -19,9 +21,11 @@ add_library(openupdater_core
     src/core/backup.cpp
     src/core/updater.cpp
     src/core/platform.cpp
+    src/core/signature.cpp
 )
 
 target_include_directories(openupdater_core PUBLIC include)
+target_link_libraries(openupdater_core PRIVATE OpenSSL::Crypto)
 
 if(WIN32)
     target_link_libraries(openupdater_core PRIVATE winhttp)
