@@ -114,8 +114,8 @@ if(WIN32)
     endif()
     if(OPENUPDATER_BUILD_GUI)
         set(CPACK_NSIS_CREATE_ICONS_EXTRA
-            "CreateShortCut '$DESKTOP\\OpenUpdater.lnk' '$INSTDIR\\openupdater.exe'"
-            "CreateShortCut '$SMPROGRAMS\\OpenUpdater.lnk' '$INSTDIR\\openupdater.exe'"
+            "CreateShortCut '$DESKTOP\\\\OpenUpdater.lnk' '$INSTDIR\\\\openupdater.exe'"
+            "CreateShortCut '$SMPROGRAMS\\\\OpenUpdater.lnk' '$INSTDIR\\\\openupdater.exe'"
         )
     endif()
     include(CPack)
