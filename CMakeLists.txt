@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 1.0.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 1.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,7 @@ add_library(openupdater_core
     src/core/github.cpp
     src/core/backup.cpp
     src/core/updater.cpp
+    src/core/platform.cpp
 )
 
 target_include_directories(openupdater_core PUBLIC include)
