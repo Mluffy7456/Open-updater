@@ -21,6 +21,13 @@ struct UpdateCheck {
     UpdateState state;
 };
 
+struct UpdateResult {
+    Version current;
+    Version available;
+    UpdateState state;
+    std::filesystem::path backup;
+};
+
 using HttpHeaders = std::vector<std::pair<std::string, std::string>>;
 
 class Downloader {
@@ -39,6 +46,13 @@ public:
 
     [[nodiscard]] static std::filesystem::path install(
         const std::filesystem::path& package,
+        const std::filesystem::path& destination,
+        const std::string& expected_sha256 = {});
+
+    [[nodiscard]] static UpdateResult update_from_github(
+        const Version& current,
+        const std::string& repository,
+        const std::string& asset_name,
         const std::filesystem::path& destination,
         const std::string& expected_sha256 = {});
 };
