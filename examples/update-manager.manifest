@@ -1,0 +1,16 @@
+# OpenUpdater v2.0 component manifest
+application=DemoApp
+version=2.0.0
+package=DemoApp-2.0.0.zip
+
+[component:Runtime]
+version=2.1.0
+dependencies=
+
+[component:Core]
+version=2.0.0
+dependencies=Runtime>=2.0.0
+
+[component:GUI]
+version=2.0.0
+dependencies=Core>=2.0.0,Runtime>=2.0.0
