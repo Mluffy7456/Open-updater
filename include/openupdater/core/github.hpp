@@ -16,6 +16,7 @@ struct GitHubRelease {
     std::string asset;
     std::string download_url;
     std::string sha256;
+    std::string signature_url;
 };
 
 class GitHubReleasesProvider {
