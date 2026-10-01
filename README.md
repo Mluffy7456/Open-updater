@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.2.1 — SHA-256 Package Verification
+v0.3.0 — GitHub Releases Provider
 
 Features:
 - semantic numeric version comparison;
@@ -12,6 +12,7 @@ Features:
 - update availability checks;
 - HTTP/HTTPS file downloading;
 - SHA-256 package hashing and verification;
+- GitHub Releases provider for latest release assets;
 - local package installation;
 - command-line interface;
 - CMake build;
@@ -58,6 +59,12 @@ Install and verify a package:
 Verify a package without installing it:
 
     openupdater verify ./DemoApp-1.4.0.zip e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+Download an asset from the latest public GitHub release:
+
+    openupdater github owner/repository DemoApp-1.4.0.zip ./DemoApp-1.4.0.zip
+
+The provider queries GitHub's latest published release, selects the exact asset name, downloads its browser URL, and verifies the SHA-256 digest when GitHub provides one. An explicit digest can also be supplied as the fifth argument.
 
 The check command returns exit code 10 when an update is available and 0 when the current version is up to date. The verify command returns exit code 0 on a matching SHA-256 digest and 3 when verification fails.
 
