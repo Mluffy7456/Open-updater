@@ -39,7 +39,10 @@ int main() {
     std::ofstream(package) << "test package";
 
     const auto destination = temp / "installed";
-    Updater::install(package, destination);
+    Updater::install(
+        package,
+        destination,
+        "e6a39ba1c067edf949f7e2906b801d919d1f36f4fd52987d149303e5f11a8607");
 
     assert(std::filesystem::exists(destination / "package.zip"));
 
