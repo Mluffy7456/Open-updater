@@ -37,7 +37,7 @@ public:
         const Version& current,
         const Manifest& manifest);
 
-    static void install(
+    [[nodiscard]] static std::filesystem::path install(
         const std::filesystem::path& package,
         const std::filesystem::path& destination,
         const std::string& expected_sha256 = {});
