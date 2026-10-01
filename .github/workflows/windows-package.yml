@@ -3,7 +3,12 @@ name: OpenUpdater Windows Package
 on:
   push:
     branches: [main]
+    tags:
+      - "v*"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   package:
@@ -12,6 +17,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Resolve package version
+        shell: pwsh
+        run: |
+          $project = Get-Content "CMakeLists.txt" -Raw
+          if ($project -notmatch 'project\\(OpenUpdater VERSION ([0-9]+\\.[0-9]+\\.[0-9]+)') {
+            throw "Unable to determine OpenUpdater project version."
+          }
+
+          $version = $Matches[1]
+          "OPENUPDATER_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          if ("$env:GITHUB_REF_NAME" -like "v*") {
+            $tagVersion = "$env:GITHUB_REF_NAME".Substring(1)
+            if ($tagVersion -ne $version) {
+              throw "Release tag $env:GITHUB_REF_NAME does not match project version $version."
+            }
+          }
 
       - name: Install OpenSSL and NSIS
         shell: pwsh
@@ -43,15 +66,17 @@ jobs:
       - name: Verify packages
         shell: pwsh
         run: |
-          if (-not (Test-Path "OpenUpdater-2.0.0-windows-x64.exe")) {
-            throw "Installer was not generated."
+          $installer = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
+          $portable = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.zip"
+
+          if (-not (Test-Path $installer)) {
+            throw "Installer was not generated: $installer"
           }
-          if (-not (Test-Path "OpenUpdater-2.0.0-windows-x64.zip")) {
-            throw "Portable ZIP was not generated."
+          if (-not (Test-Path $portable)) {
+            throw "Portable ZIP was not generated: $portable"
           }
 
-          $zip = "OpenUpdater-2.0.0-windows-x64.zip"
-          $entries = tar -tf $zip
+          $entries = tar -tf $portable
           if (-not ($entries -match "openupdater.exe")) {
             throw "Portable package does not contain openupdater.exe."
           }
@@ -62,12 +87,14 @@ jobs:
       - name: Test installer
         shell: pwsh
         run: |
+          $installer = ".\\OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
           $installDir = Join-Path $env:RUNNER_TEMP "OpenUpdaterInstalled"
+
           if (Test-Path $installDir) {
             Remove-Item $installDir -Recurse -Force
           }
 
-          $process = Start-Process -FilePath ".\OpenUpdater-2.0.0-windows-x64.exe" -ArgumentList "/S", "/D=$installDir" -Wait -PassThru
+          $process = Start-Process -FilePath $installer -ArgumentList "/S", "/D=$installDir" -Wait -PassThru
 
           if ($process.ExitCode -ne 0) {
             throw "Installer exited with code $($process.ExitCode)."
@@ -83,15 +110,49 @@ jobs:
             throw "Installer did not install libcrypto-3-x64.dll."
           }
 
-          & $installedExe version 2.0.0 | Out-Null
+          & $installedExe version $env:OPENUPDATER_VERSION | Out-Null
           if ($LASTEXITCODE -ne 0) {
             throw "Installed OpenUpdater failed to start."
           }
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $installer = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
+          $portable = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.zip"
+
+          @(
+            (Get-FileHash $installer -Algorithm SHA256)
+            (Get-FileHash $portable -Algorithm SHA256)
+          ) | ForEach-Object {
+            "$($_.Hash.ToLower())  $($_.Path | Split-Path -Leaf)"
+          } | Set-Content "SHA256SUMS.txt"
 
       - name: Upload Windows packages
         uses: actions/upload-artifact@v4
         with:
           name: OpenUpdater-Windows-x64
           path: |
-            OpenUpdater-2.0.0-windows-x64.exe
-            OpenUpdater-2.0.0-windows-x64.zip
+            OpenUpdater-${{ env.OPENUPDATER_VERSION }}-windows-x64.exe
+            OpenUpdater-${{ env.OPENUPDATER_VERSION }}-windows-x64.zip
+            SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $installer = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
+          $portable = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.zip"
+
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          $releaseExists = ($LASTEXITCODE -eq 0)
+
+          if ($releaseExists) {
+            gh release upload $tag $installer $portable SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --clobber
+          }
+          else {
+            gh release create $tag $installer $portable SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --verify-tag --generate-notes --latest
+          }
