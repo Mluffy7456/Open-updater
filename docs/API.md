@@ -1,4 +1,4 @@
-# OpenUpdater 1.1 API
+# OpenUpdater 1.2 API
 
 OpenUpdater 1.0 exposes a stable C++20 core API. The GUI and CLI are clients of the same core library.
 
@@ -11,7 +11,7 @@ Use the compile-time API version constants:
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-The 1.1 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+The 1.2 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
 
 ## Platform and architecture
 
@@ -20,6 +20,36 @@ The core exposes `Platform` and `Architecture` enums plus `current_platform()` a
 `platform_name()` and `architecture_name()` return stable lowercase identifiers such as `windows`, `linux`, `macos`, `x64` and `arm64`.
 
 `GitHubReleasesProvider::latest_compatible(...)` selects an asset using the convention `<component>-<platform>-<architecture>.<extension>`. It rejects unknown host information and ambiguous multiple matches rather than silently selecting an arbitrary package.
+
+## Update discovery
+
+The high-level discovery entry point is:
+
+    openupdater::Updater::discover_updates(
+        const openupdater::UpdateDiscoveryRequest&)
+
+UpdateDiscoveryRequest contains:
+
+- repository — GitHub owner/repository;
+- targets — components and their installed versions;
+- platform — target platform, defaulting to the current host;
+- architecture — target CPU architecture, defaulting to the current host;
+- headers — optional HTTP headers.
+
+For every target, discovery looks for a compatible asset in the latest published GitHub release. It returns only targets whose release version is newer than the supplied current version. A missing compatible asset is omitted from the result.
+
+AvailableUpdate contains:
+
+- component;
+- current;
+- available;
+- asset;
+- platform;
+- architecture;
+- sha256;
+- download_url.
+
+Discovery performs only metadata retrieval. It does not download packages, create backups, or install anything. The returned vector is intended for a later selection/installation stage.
 
 ## Update request
 
@@ -73,7 +103,7 @@ The legacy lower-level functions remain available for applications that need dir
 
 ## Compatibility
 
-The following existing APIs remain available in 1.0:
+The following existing APIs remain available in 1.x:
 
 - Version
 - Manifest and load_manifest
@@ -84,6 +114,6 @@ The following existing APIs remain available in 1.0:
 - Updater::install
 - Updater::update_from_github
 
-The high-level Updater::update should be preferred for new integrations.
+The high-level Updater::update should be preferred for direct single-package updates. For workflows that inspect multiple components before installing, use Updater::discover_updates first.
 
 The exact-asset GitHub API remains available for applications that need explicit asset selection.
