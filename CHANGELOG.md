@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0] - 2026-10-01
+
+### Added
+- Multi-component update discovery API.
+- `UpdateTarget`, `AvailableUpdate` and `UpdateDiscoveryRequest` types.
+- `Updater::discover_updates(...)` for checking updates without downloading or installing packages.
+- Single GitHub metadata request for discovery across multiple components.
+
+### Changed
+- Public API and project version updated to 1.2.0.
+- GitHub provider User-Agent updated to OpenUpdater/1.2.
+
+
 ## [1.1.0] - 2026-10-01
 
 ### Added
