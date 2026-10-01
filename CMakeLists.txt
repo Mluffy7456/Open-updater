@@ -47,8 +47,23 @@ add_executable(openupdater src/cli/main.cpp)
 target_link_libraries(openupdater PRIVATE openupdater_core)
 
 if(WIN32)
+    set(OPENUPDATER_ICON_PATH "\${CMAKE_SOURCE_DIR}/assets/openupdater.ico")
+    if(EXISTS "\${OPENUPDATER_ICON_PATH}")
+        configure_file(
+            "\${CMAKE_SOURCE_DIR}/src/windows/openupdater.rc.in"
+            "\${CMAKE_CURRENT_BINARY_DIR}/openupdater.rc"
+            @ONLY
+        )
+        target_sources(openupdater PRIVATE "\${CMAKE_CURRENT_BINARY_DIR}/openupdater.rc")
+    endif()
+
+    set(OPENUPDATER_OPENSSL_DLL "C:/Program Files/OpenSSL/bin/libcrypto-3-x64.dll")
+    if(NOT EXISTS "\${OPENUPDATER_OPENSSL_DLL}")
+        message(FATAL_ERROR "OpenSSL runtime DLL not found: \${OPENUPDATER_OPENSSL_DLL}")
+    endif()
+
     install(TARGETS openupdater RUNTIME DESTINATION .)
-    install(FILES "C:/Program Files/OpenSSL/bin/libcrypto-3-x64.dll" DESTINATION . OPTIONAL)
+    install(FILES "\${OPENUPDATER_OPENSSL_DLL}" DESTINATION .)
 
     set(CPACK_PACKAGE_NAME "OpenUpdater")
     set(CPACK_PACKAGE_VENDOR "Mluffy7456")
@@ -62,6 +77,10 @@ if(WIN32)
     set(CPACK_NSIS_CONTACT "https://github.com/Mluffy7456/Open-updater")
     set(CPACK_NSIS_HELP_LINK "https://github.com/Mluffy7456/Open-updater")
     set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/Mluffy7456/Open-updater")
+    if(EXISTS "\${OPENUPDATER_ICON_PATH}")
+        set(CPACK_NSIS_MUI_ICON "\${OPENUPDATER_ICON_PATH}")
+        set(CPACK_NSIS_MUI_UNIICON "\${OPENUPDATER_ICON_PATH}")
+    endif()
     include(CPack)
 endif()
 
