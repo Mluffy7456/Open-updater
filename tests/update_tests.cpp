@@ -9,7 +9,7 @@ int main() {
     using namespace openupdater;
 
     static_assert(API_VERSION_MAJOR == 1);
-    static_assert(API_VERSION_MINOR == 3);
+    static_assert(API_VERSION_MINOR == 4);
     static_assert(API_VERSION_PATCH == 0);
 
     const UpdateRequest request{
@@ -25,6 +25,8 @@ int main() {
     assert(request.options.backup_existing);
     assert(request.options.automatic_rollback);
     assert(request.options.verify_download);
+    assert(!request.options.verify_signature);
+    assert(request.options.trusted_public_key.empty());
     const UpdateDiscoveryRequest discovery_request{
         "owner/repository",
         {
