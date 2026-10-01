@@ -100,6 +100,7 @@ std::vector<DiscoveredUpdate> parse_upgrade_table(const std::string& output) {
     std::size_t available_column = std::string::npos;
     std::size_t source_column = std::string::npos;
     bool header_found = false;
+    std::vector<DiscoveredUpdate> result;
 
     while (std::getline(input, line)) {
         if (!header_found &&
@@ -152,7 +153,7 @@ std::vector<DiscoveredUpdate> parse_upgrade_table(const std::string& output) {
         update.source = UpdateSource::WinGet;
         update.provider = "WinGet";
         update.platform = "Windows";
-        update.source_name = source;
+        (void)source;
         result.push_back(std::move(update));
     }
 
