@@ -5,6 +5,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 option(OPENUPDATER_BUILD_GUI "Build the optional Qt 6 GUI" OFF)
 
 if(NOT WIN32)
@@ -41,6 +45,25 @@ endif()
 
 add_executable(openupdater src/cli/main.cpp)
 target_link_libraries(openupdater PRIVATE openupdater_core)
+
+if(WIN32)
+    install(TARGETS openupdater RUNTIME DESTINATION .)
+    install(FILES "C:/Program Files/OpenSSL/bin/libcrypto-3-x64.dll" DESTINATION . OPTIONAL)
+
+    set(CPACK_PACKAGE_NAME "OpenUpdater")
+    set(CPACK_PACKAGE_VENDOR "Mluffy7456")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Open-source cross-platform application updater")
+    set(CPACK_PACKAGE_VERSION "2.0.0")
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "OpenUpdater")
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_PACKAGE_FILE_NAME "OpenUpdater-2.0.0-windows-x64")
+    set(CPACK_NSIS_DISPLAY_NAME "OpenUpdater 2.0.0")
+    set(CPACK_NSIS_PACKAGE_NAME "OpenUpdater")
+    set(CPACK_NSIS_CONTACT "https://github.com/Mluffy7456/Open-updater")
+    set(CPACK_NSIS_HELP_LINK "https://github.com/Mluffy7456/Open-updater")
+    set(CPACK_NSIS_URL_INFO_ABOUT "https://github.com/Mluffy7456/Open-updater")
+    include(CPack)
+endif()
 
 if(OPENUPDATER_BUILD_GUI)
     find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent)
