@@ -39,6 +39,9 @@ public:
     [[nodiscard]] static std::vector<AvailableUpdate> discover_updates(
         const UpdateDiscoveryRequest& request);
 
+    [[nodiscard]] static std::vector<UpdateReport> update_selected(
+        const SelectedUpdateRequest& request);
+
     [[nodiscard]] static UpdateCheck check(
         const Version& current,
         const Manifest& manifest);
