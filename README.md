@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v1.4.0 — Package signatures
+v2.0.0 — Full update manager
 
 Features:
 - semantic numeric version comparison;
@@ -43,6 +43,7 @@ Requirements:
 - CMake 3.20+
 - Git
 - libcurl development package on Linux
+- OpenSSL 1.1.1+ development package
 
 Build:
 
@@ -197,13 +198,45 @@ Exit codes for update:
 
 The latest-release endpoint used by the GitHub provider represents the most recent published non-prerelease, non-draft release.
 
+## Full update manager
+
+OpenUpdater 2.0 adds dependency-aware planning and atomic multi-component transactions.
+
+A component manifest can describe target versions and minimum dependency versions:
+
+    application=DemoApp
+    version=2.0.0
+    package=DemoApp-2.0.0.zip
+
+    [component:Runtime]
+    version=2.1.0
+    dependencies=
+
+    [component:Core]
+    version=2.0.0
+    dependencies=Runtime>=2.0.0
+
+    [component:GUI]
+    version=2.0.0
+    dependencies=Core>=2.0.0,Runtime>=2.0.0
+
+Use `Updater::build_plan(...)` to validate dependencies and produce a topological installation order. Selecting `GUI` automatically includes required dependency updates.
+
+Use `Updater::apply_plan(...)` to execute a transaction. The manager first downloads every package and performs SHA-256/signature verification. No installation starts until the complete preflight succeeds. During activation, a failure rolls back already-installed components in reverse dependency order.
+
+Transactional execution requires both `UpdateOptions::backup_existing` and `UpdateOptions::automatic_rollback` to remain enabled; this prevents a partial update from being silently left in place.
+
+The full example is available at `examples/update-manager.manifest`.
+
 ## Manifest
 
-Example:
+The original three-key manifest remains valid:
 
     application=DemoApp
     version=1.4.0
     package=DemoApp-1.4.0.zip
+
+Component sections are optional and extend the same manifest format.
 
 ## Roadmap
 
@@ -219,9 +252,22 @@ Example:
 - 1.2.0 — Update discovery
 - 1.3.0 — Update selection and selective installation
 - 1.4.0 — Ed25519 package signature verification
-- 1.4.0 — Digital package signatures
 - 2.0.0 — Full update manager
 
 ## License
 
 MIT.
+
+
+### v2.0 API example
+
+    openupdater::UpdateManagerRequest request{
+        discovered_updates,
+        selection,
+        manifest.components,
+        installed_components,
+        "./updates"
+    };
+
+    const auto plan = openupdater::Updater::build_plan(request);
+    const auto result = openupdater::Updater::apply_plan(request);
