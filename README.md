@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v2.1.0 — Windows desktop GUI
+v2.2.0 — Universal update manager
 
 Features:
 - semantic numeric version comparison;
@@ -29,6 +29,10 @@ Features:
 - core-level selection and selective installation of discovered updates;
 - optional Ed25519 package signature verification backed by OpenSSL;
 - asynchronous GUI operations;
+- universal update-provider architecture;
+- Windows WinGet application and developer-tool updates;
+- Windows Update driver discovery and installation;
+- checkbox-based selective update installation;
 - local package installation;
 - command-line interface;
 - CMake build;
@@ -52,7 +56,7 @@ Build:
     ctest --test-dir build -C Release --output-on-failure
 
 ## Desktop GUI
-\nThe Qt 6 desktop application is the primary Windows user interface. It provides GitHub release configuration, update checks, asynchronous installation, status reporting, and the same C++20 updater core used by the CLI.\n\nOn Windows, the installer includes the Qt runtime and the GUI executable `openupdater.exe`. The command-line tool is installed separately as `openupdater-cli.exe`.\n\nThe GUI uses the vector asset `assets/openupdater.svg` for its application icon.\n\n## CLI\n
+\nThe Qt 6 desktop application is the primary Windows user interface. It scans supported update providers, groups available updates by category, and lets the user select individual applications, programming tools, runtimes, and drivers with checkboxes before installation.\n\nOn Windows, the installer includes the Qt runtime and the GUI executable `openupdater.exe`. The command-line tool is installed separately as `openupdater-cli.exe`.\n\nThe GUI uses the vector asset `assets/openupdater.svg` for its application icon.\n\n## CLI\n
 Check a version:
 
     openupdater version 1.2.3
@@ -238,6 +242,21 @@ The original three-key manifest remains valid:
 
 Component sections are optional and extend the same manifest format.
 
+## Universal update manager
+
+OpenUpdater 2.2 introduces a provider-based universal update manager. The GUI does not assume that every product uses GitHub Releases: each update source is represented by an `IUpdateProvider`, and discovered updates are normalized into one list.
+
+On Windows, the first providers are:
+
+- **WinGet** — installed applications and developer tools that are available through the Windows Package Manager;
+- **Windows Update** — applicable driver updates returned by the Windows Update Agent API.
+
+WinGet is used for both ordinary applications and programming/developer tools such as Python, Node.js, Git, .NET, Java, CMake, LLVM/Clang and Visual Studio components when their package metadata identifies them accordingly. WinGet provides an official `upgrade` operation for listing available upgrades and an exact-ID upgrade operation for selected packages. citeturn0search0turn1search2
+
+Driver discovery uses the Windows Update Agent rather than downloading driver packages from arbitrary websites. The WUA API supports searches by `Type='Driver'` and exposes driver-specific metadata through `IWindowsDriverUpdate`. citeturn4search0turn4search1turn5search7
+
+The architecture is intentionally extensible. Linux package managers (`pacman`, `apt`, `dnf`, `zypper`, Flatpak) and macOS package managers can be added as providers without changing the GUI or normalized update model. Driver providers for vendor-specific channels can also be added later, but they should use official vendor sources.
+
 ## Roadmap
 
 - 0.1.0 — Foundation
@@ -253,6 +272,7 @@ Component sections are optional and extend the same manifest format.
 - 1.3.0 — Update selection and selective installation
 - 1.4.0 — Ed25519 package signature verification
 - 2.0.0 — Full update manager\n- 2.1.0 — Windows desktop GUI and packaged Qt runtime
+- 2.2.0 — Universal update manager with WinGet and Windows Update providers
 
 
 ### v2.0 API example
