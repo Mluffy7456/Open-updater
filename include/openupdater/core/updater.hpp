@@ -1,6 +1,7 @@
 #pragma once
 
 #include "openupdater/core/manifest.hpp"
+#include "openupdater/core/sha256.hpp"
 
 #include <filesystem>
 #include <string>
@@ -33,7 +34,8 @@ public:
 
     static void install(
         const std::filesystem::path& package,
-        const std::filesystem::path& destination);
+        const std::filesystem::path& destination,
+        const std::string& expected_sha256 = {});
 };
 
 } // namespace openupdater
