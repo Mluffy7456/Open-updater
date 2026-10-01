@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0] - 2026-10-01
+
+### Added
+- Stable high-level C++20 updater API.
+- Versioned API constants for 1.0.0.
+- Typed UpdateError and ErrorCode failure model.
+- UpdateRequest, UpdateOptions and UpdateReport.
+- Configurable backup, automatic rollback and download verification policy.
+- Configurable GitHub HTTP headers.
+- Stable API reference in docs/API.md.
+- CLI update flow routed through the stable API.
+- Stable API unit coverage.
+
+### Changed
+- Project version updated to 1.0.0.
+- CLI and GUI version labels updated to 1.0.0.
+- Windows WinHTTP User-Agent updated to OpenUpdater/1.0.0.
+
 ## [0.6.0] - 2026-10-01
 
 ### Added
@@ -12,8 +30,6 @@
 
 ### Changed
 - Project version updated to 0.6.0.
-
-# Changelog
 
 ## [0.5.0] - 2026-10-01
 
