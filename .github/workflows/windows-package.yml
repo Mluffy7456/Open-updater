@@ -5,7 +5,13 @@ on:
     branches: [main]
     tags:
       - "v*"
+      - "[0-9]*"
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to build and publish (for example 2.0.0)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -17,9 +23,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag != '' && inputs.release_tag || github.ref }}
 
       - name: Resolve package version
         shell: pwsh
+        env:
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
         run: |
           $project = Get-Content "CMakeLists.txt" -Raw
           if ($project -notmatch 'project\(OpenUpdater VERSION ([0-9]+\.[0-9]+\.[0-9]+)') {
@@ -29,10 +39,22 @@ jobs:
           $version = $Matches[1]
           "OPENUPDATER_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-          if ("$env:GITHUB_REF_NAME" -like "v*") {
-            $tagVersion = "$env:GITHUB_REF_NAME".Substring(1)
+          if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $releaseTag = $env:GITHUB_REF_NAME
+          }
+          elseif (-not [string]::IsNullOrWhiteSpace($env:RELEASE_TAG_INPUT)) {
+            $releaseTag = $env:RELEASE_TAG_INPUT
+          }
+          else {
+            $releaseTag = ""
+          }
+
+          "OPENUPDATER_RELEASE_TAG=$releaseTag" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          if (-not [string]::IsNullOrWhiteSpace($releaseTag)) {
+            $tagVersion = $releaseTag -replace '^v', ''
             if ($tagVersion -ne $version) {
-              throw "Release tag $env:GITHUB_REF_NAME does not match project version $version."
+              throw "Release tag $releaseTag does not match project version $version."
             }
           }
 
@@ -87,7 +109,7 @@ jobs:
       - name: Test installer
         shell: pwsh
         run: |
-          $installer = ".\\OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
+          $installer = ".\OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
           $installDir = Join-Path $env:RUNNER_TEMP "OpenUpdaterInstalled"
 
           if (Test-Path $installDir) {
@@ -138,12 +160,12 @@ jobs:
             SHA256SUMS.txt
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: env.OPENUPDATER_RELEASE_TAG != ''
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          $tag = $env:OPENUPDATER_RELEASE_TAG
           $installer = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.exe"
           $portable = "OpenUpdater-$env:OPENUPDATER_VERSION-windows-x64.zip"
 
