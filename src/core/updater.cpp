@@ -10,6 +10,8 @@
 #include <filesystem>
 #include <algorithm>
 #include <fstream>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -627,6 +629,424 @@ std::vector<UpdateReport> Updater::update_selected(
     }
 
     return reports;
+}
+
+
+
+UpdatePlan Updater::build_plan(const UpdateManagerRequest& request) {
+    if (request.updates.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "No available updates were supplied.");
+
+    if (request.selection.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "No updates were selected.");
+
+    if (request.destination.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "Update destination cannot be empty.");
+
+    std::map<std::string, const AvailableUpdate*> updates_by_component;
+    for (const auto& update : request.updates) {
+        if (update.component.empty())
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Available update has an empty component name.");
+
+        if (!update.available.valid() || !update.current.valid())
+            throw UpdateError(
+                ErrorCode::InvalidVersion,
+                "Available update has an invalid version: " +
+                update.component);
+
+        if (!updates_by_component.emplace(update.component, &update).second)
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Duplicate available update component: " +
+                update.component);
+    }
+
+    std::map<std::string, const ComponentMetadata*> metadata_by_component;
+    for (const auto& metadata : request.metadata) {
+        if (metadata.component.empty())
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Component metadata has an empty component name.");
+
+        if (!metadata.version.valid())
+            throw UpdateError(
+                ErrorCode::InvalidVersion,
+                "Component metadata has an invalid version: " +
+                metadata.component);
+
+        if (!metadata_by_component.emplace(metadata.component, &metadata).second)
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Duplicate component metadata: " + metadata.component);
+
+        for (const auto& dependency : metadata.dependencies) {
+            if (dependency.component.empty() ||
+                !dependency.minimum_version.valid()) {
+                throw UpdateError(
+                    ErrorCode::InvalidArgument,
+                    "Invalid dependency metadata for component: " +
+                    metadata.component);
+            }
+        }
+    }
+
+    std::map<std::string, Version> installed_versions;
+    for (const auto& target : request.installed) {
+        if (target.component.empty() || !target.current.valid())
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Installed component metadata is invalid.");
+
+        if (!installed_versions.emplace(
+                target.component, target.current).second) {
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Duplicate installed component: " + target.component);
+        }
+    }
+
+    std::set<std::string> visiting;
+    std::set<std::string> resolved;
+    std::vector<std::string> install_order;
+
+    const auto resolve = [&](const auto& self, const std::string& component) -> void {
+        if (resolved.contains(component))
+            return;
+
+        if (!visiting.insert(component).second)
+            throw UpdateError(
+                ErrorCode::DependencyFailed,
+                "Cyclic component dependency detected at: " + component);
+
+        const auto metadata_it = metadata_by_component.find(component);
+        if (metadata_it == metadata_by_component.end())
+            throw UpdateError(
+                ErrorCode::DependencyFailed,
+                "Missing metadata for component: " + component);
+
+        const auto update_it = updates_by_component.find(component);
+        if (update_it == updates_by_component.end())
+            throw UpdateError(
+                ErrorCode::DependencyFailed,
+                "No update candidate exists for selected component: " +
+                component);
+
+        const auto* update = update_it->second;
+        const auto* metadata = metadata_it->second;
+
+        if (metadata->version != update->available)
+            throw UpdateError(
+                ErrorCode::DependencyFailed,
+                "Component metadata version does not match available update: " +
+                component);
+
+        for (const auto& dependency : metadata->dependencies) {
+            const auto dependency_update_it =
+                updates_by_component.find(dependency.component);
+
+            const auto installed_it =
+                installed_versions.find(dependency.component);
+
+            if (dependency_update_it != updates_by_component.end()) {
+                const auto* dependency_update = dependency_update_it->second;
+
+                if (dependency_update->available < dependency.minimum_version) {
+                    if (installed_it == installed_versions.end() ||
+                        installed_it->second < dependency.minimum_version) {
+                        throw UpdateError(
+                            ErrorCode::DependencyFailed,
+                            "Unsatisfied dependency " +
+                            dependency.component + ">=" +
+                            dependency.minimum_version.str() +
+                            " for " + component);
+                    }
+
+                    continue;
+                }
+
+                self(self, dependency.component);
+                continue;
+            }
+
+            if (installed_it == installed_versions.end() ||
+                installed_it->second < dependency.minimum_version) {
+                throw UpdateError(
+                    ErrorCode::DependencyFailed,
+                    "Required dependency is unavailable: " +
+                    dependency.component + ">=" +
+                    dependency.minimum_version.str() +
+                    " for " + component);
+            }
+        }
+
+        visiting.erase(component);
+        resolved.insert(component);
+        install_order.push_back(component);
+    };
+
+    for (const auto& component : request.selection.components) {
+        if (!updates_by_component.contains(component))
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Selected update is not present in discovery results: " +
+                component);
+
+        resolve(resolve, component);
+    }
+
+    UpdatePlan plan;
+    plan.install_order = install_order;
+    plan.updates.reserve(install_order.size());
+
+    for (const auto& component : install_order) {
+        plan.updates.push_back(*updates_by_component.at(component));
+    }
+
+    std::set<std::filesystem::path> targets;
+    for (const auto& update : plan.updates) {
+        if (update.asset.empty() || update.download_url.empty())
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Update package metadata is incomplete: " +
+                update.component);
+
+        const auto target = request.destination / update.asset;
+        if (!targets.insert(target).second)
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Multiple components resolve to the same installation target: " +
+                target.string());
+    }
+
+    return plan;
+}
+
+UpdateTransactionReport Updater::apply_plan(
+    const UpdateManagerRequest& request) {
+
+    const auto plan = build_plan(request);
+
+    if (!request.options.backup_existing ||
+        !request.options.automatic_rollback) {
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "Transactional updates require backup_existing and automatic_rollback.");
+    }
+
+    const auto staging_directory =
+        request.destination / ".openupdater" / "staging";
+    std::filesystem::create_directories(staging_directory);
+
+    struct PreparedPackage {
+        const AvailableUpdate* update;
+        std::filesystem::path package;
+        std::filesystem::path signature;
+        std::string digest;
+    };
+
+    std::vector<PreparedPackage> prepared;
+    prepared.reserve(plan.updates.size());
+
+    const auto cleanup_prepared = [&]() {
+        for (const auto& item : prepared) {
+            std::error_code error;
+            std::filesystem::remove(item.package, error);
+            std::filesystem::remove(item.signature, error);
+        }
+    };
+
+    HttpHeaders headers(
+        request.options.headers.begin(),
+        request.options.headers.end());
+
+    try {
+        // Phase 1: download and verify every package before touching the installation.
+        for (std::size_t index = 0; index < plan.updates.size(); ++index) {
+            const auto& update = plan.updates[index];
+            const auto stamp =
+                std::chrono::high_resolution_clock::now()
+                    .time_since_epoch().count();
+
+            const auto package_path =
+                staging_directory /
+                (update.component + "." + std::to_string(index) + "." +
+                 std::to_string(stamp) + ".transaction.download");
+
+            const auto signature_path =
+                staging_directory /
+                (update.component + "." + std::to_string(index) + "." +
+                 std::to_string(stamp) + ".transaction.sig");
+
+            const auto digest = update.sha256;
+
+            Downloader::download(
+                update.download_url,
+                package_path,
+                headers);
+
+            if (request.options.verify_download && !digest.empty() &&
+                !verify_sha256(package_path, digest)) {
+                throw UpdateError(
+                    ErrorCode::VerificationFailed,
+                    "SHA-256 verification failed during transaction preflight: " +
+                    update.component);
+            }
+
+            if (request.options.verify_signature) {
+                if (request.options.trusted_public_key.empty())
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "Trusted Ed25519 public key is required for signature verification.");
+
+                if (update.signature_url.empty())
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "No detached signature is available for: " +
+                        update.component);
+
+                Downloader::download(
+                    update.signature_url,
+                    signature_path,
+                    headers);
+
+                const auto signature = read_signature(signature_path);
+                if (!SignatureVerifier::verify_ed25519_sha256(
+                        package_path,
+                        signature,
+                        request.options.trusted_public_key)) {
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "Ed25519 signature verification failed during transaction preflight: " +
+                        update.component);
+                }
+            }
+
+            prepared.push_back({
+                &update,
+                package_path,
+                signature_path,
+                digest
+            });
+        }
+    } catch (const UpdateError&) {
+        cleanup_prepared();
+        throw;
+    } catch (const std::exception& error) {
+        cleanup_prepared();
+        throw UpdateError(
+            ErrorCode::TransactionFailed,
+            "Transaction preflight failed: " + std::string(error.what()));
+    }
+
+    std::vector<std::pair<std::filesystem::path, std::filesystem::path>>
+        installed_targets;
+    std::vector<UpdateReport> reports;
+    installed_targets.reserve(prepared.size());
+    reports.reserve(prepared.size());
+
+    try {
+        // Phase 2: activate packages in dependency order.
+        for (const auto& item : prepared) {
+            const auto backup = install_package(
+                item.package,
+                request.destination,
+                request.options.verify_download ? item.digest : std::string{},
+                request.options);
+
+            const auto target = request.destination / item.update->asset;
+            installed_targets.emplace_back(target, backup);
+
+            reports.push_back({
+                item.update->current,
+                item.update->available,
+                UpdateState::UpdateAvailable,
+                target,
+                backup
+            });
+        }
+    } catch (const UpdateError& error) {
+        bool rollback_failed = false;
+        std::string rollback_message;
+
+        for (auto it = installed_targets.rbegin();
+             it != installed_targets.rend(); ++it) {
+            try {
+                if (!it->second.empty()) {
+                    BackupManager::rollback(it->second, it->first);
+                } else {
+                    std::error_code cleanup_error;
+                    std::filesystem::remove(it->first, cleanup_error);
+                    if (cleanup_error)
+                        throw std::runtime_error(
+                            cleanup_error.message());
+                }
+            } catch (const std::exception& rollback_error) {
+                rollback_failed = true;
+                rollback_message +=
+                    " " + it->first.string() + ": " +
+                    rollback_error.what();
+            }
+        }
+
+        cleanup_prepared();
+
+        if (rollback_failed) {
+            throw UpdateError(
+                ErrorCode::RollbackFailed,
+                "Transaction installation failed and rollback was incomplete:" +
+                rollback_message);
+        }
+
+        throw error;
+    } catch (const std::exception& error) {
+        bool rollback_failed = false;
+        std::string rollback_message;
+
+        for (auto it = installed_targets.rbegin();
+             it != installed_targets.rend(); ++it) {
+            try {
+                if (!it->second.empty()) {
+                    BackupManager::rollback(it->second, it->first);
+                } else {
+                    std::error_code cleanup_error;
+                    std::filesystem::remove(it->first, cleanup_error);
+                    if (cleanup_error)
+                        throw std::runtime_error(cleanup_error.message());
+                }
+            } catch (const std::exception& rollback_error) {
+                rollback_failed = true;
+                rollback_message +=
+                    " " + it->first.string() + ": " +
+                    rollback_error.what();
+            }
+        }
+
+        cleanup_prepared();
+
+        if (rollback_failed) {
+            throw UpdateError(
+                ErrorCode::RollbackFailed,
+                "Transaction installation failed and rollback was incomplete:" +
+                rollback_message);
+        }
+
+        throw UpdateError(
+            ErrorCode::TransactionFailed,
+            "Transaction installation failed: " +
+            std::string(error.what()));
+    }
+
+    cleanup_prepared();
+
+    return {std::move(reports), plan.install_order};
 }
 
 std::filesystem::path Updater::install(
