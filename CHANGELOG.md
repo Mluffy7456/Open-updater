@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.0.0] - 2026-10-01
+
+### Added
+- Dependency-aware multi-component update planning.
+- Component metadata with minimum dependency versions.
+- Extended manifests with [component:<name>] sections.
+- Topological installation order with dependencies before dependents.
+- Automatic inclusion of required dependency updates.
+- Dependency cycle and unsatisfied dependency detection.
+- Transactional update execution with complete preflight download and verification.
+- Transaction-level rollback of already-installed components.
+- New DependencyFailed and TransactionFailed error codes.
+- UpdatePlan, UpdateManagerRequest and UpdateTransactionReport APIs.
+- Manager and manifest unit tests.
+- v2.0 component manifest example.
+
+### Changed
+- Public API and project version updated to 2.0.0.
+- Transactional updates require backup and automatic rollback to avoid silent partial state.
+- Client version identifiers and GitHub User-Agent updated to OpenUpdater/2.0.
+
 ## [1.4.0] - 2026-10-01
 
 ### Added
@@ -14,32 +35,29 @@
 - Public API and project version updated to 1.4.0.
 - CI now installs OpenSSL on Linux and Windows.
 
-
 ## [1.3.0] - 2026-10-01
 
 ### Added
 - Core-level update selection API.
-- `UpdateSelection` with select, deselect, clear and select-all operations.
-- `SelectedUpdateRequest` for selective installation.
-- `Updater::update_selected(...)` for installing only explicitly selected discovered updates.
+- UpdateSelection with select, deselect, clear and select-all operations.
+- SelectedUpdateRequest for selective installation.
+- Updater::update_selected(...) for installing only explicitly selected discovered updates.
 - Tests for selection behavior and validation.
 
 ### Changed
 - Public API and project version updated to 1.3.0.
 
-
 ## [1.2.0] - 2026-10-01
 
 ### Added
 - Multi-component update discovery API.
-- `UpdateTarget`, `AvailableUpdate` and `UpdateDiscoveryRequest` types.
-- `Updater::discover_updates(...)` for checking updates without downloading or installing packages.
+- UpdateTarget, AvailableUpdate and UpdateDiscoveryRequest types.
+- Updater::discover_updates(...) for checking updates without downloading or installing packages.
 - Single GitHub metadata request for discovery across multiple components.
 
 ### Changed
 - Public API and project version updated to 1.2.0.
 - GitHub provider User-Agent updated to OpenUpdater/1.2.
-
 
 ## [1.1.0] - 2026-10-01
 
@@ -48,13 +66,12 @@
 - Runtime architecture detection for x64, x86, ARM64 and ARM32.
 - Platform and architecture naming helpers.
 - Platform-aware GitHub release asset matching.
-- `GitHubReleasesProvider::latest_compatible(...)` for automatic compatible asset selection.
+- GitHubReleasesProvider::latest_compatible(...) for automatic compatible asset selection.
 - Unit coverage for platform detection and asset matching.
 
 ### Changed
 - Project and public API version updated to 1.1.0.
 - GitHub provider User-Agent updated to OpenUpdater/1.1.
-
 
 ## [1.0.0] - 2026-10-01
 
