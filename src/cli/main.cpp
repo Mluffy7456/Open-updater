@@ -12,7 +12,7 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 0.4.0\n"
+        << "OpenUpdater 0.5.0\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
@@ -20,10 +20,11 @@ void print_usage() {
         << "  openupdater rollback <backup> <destination>\n"
         << "  openupdater verify <package> <sha256>\n"
         << "  openupdater download <url> <destination>\n"
-        << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n";
+        << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n"
+        << "  openupdater update [--silent] <current-version> <owner/repository> <asset> <destination> [sha256]\n";
 }
 
-} // namespace
+}
 
 int main(int argc, char* argv[]) {
     try {
@@ -143,6 +144,49 @@ int main(int argc, char* argv[]) {
             }
 
             std::cout << "SHA-256 verification passed.\n";
+            return 0;
+        }
+
+        if (command == "update") {
+            bool silent = false;
+            int first_argument = 2;
+
+            if (first_argument < argc &&
+                std::string(argv[first_argument]) == "--silent") {
+                silent = true;
+                ++first_argument;
+            }
+
+            const int remaining = argc - first_argument;
+            if (remaining != 4 && remaining != 5) {
+                print_usage();
+                return 1;
+            }
+
+            const std::string expected_sha256 =
+                remaining == 5 ? argv[first_argument + 4] : "";
+
+            const openupdater::Version current(argv[first_argument]);
+            const auto result = openupdater::Updater::update_from_github(
+                current,
+                argv[first_argument + 1],
+                argv[first_argument + 2],
+                argv[first_argument + 3],
+                expected_sha256);
+
+            if (result.state == openupdater::UpdateState::UpToDate) {
+                if (!silent)
+                    std::cout << "Already up to date: "
+                              << result.available.str() << '\n';
+                return 10;
+            }
+
+            if (!silent) {
+                std::cout << "Updated to " << result.available.str() << ".\n";
+                if (!result.backup.empty())
+                    std::cout << "Backup: " << result.backup.string() << '\n';
+            }
+
             return 0;
         }
 
