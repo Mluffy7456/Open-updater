@@ -254,10 +254,6 @@ Component sections are optional and extend the same manifest format.
 - 1.4.0 — Ed25519 package signature verification
 - 2.0.0 — Full update manager
 
-## License
-
-MIT.
-
 
 ### v2.0 API example
 
@@ -271,3 +267,7 @@ MIT.
 
     const auto plan = openupdater::Updater::build_plan(request);
     const auto result = openupdater::Updater::apply_plan(request);
+
+## License
+
+MIT.
