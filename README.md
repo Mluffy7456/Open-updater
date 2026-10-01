@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.3.0 — GitHub Releases Provider
+v0.4.0 — Backup and Rollback
 
 Features:
 - semantic numeric version comparison;
@@ -13,6 +13,9 @@ Features:
 - HTTP/HTTPS file downloading;
 - SHA-256 package hashing and verification;
 - GitHub Releases provider for latest release assets;
+- staged package installation;
+- automatic backup of an existing installed package;
+- rollback of a previous installation;
 - local package installation;
 - command-line interface;
 - CMake build;
@@ -51,6 +54,12 @@ Download an update:
 Install a local package:
 
     openupdater install ./DemoApp-1.4.0.zip ./updates
+
+If `./updates/DemoApp-1.4.0.zip` already exists, OpenUpdater creates a backup under `./updates/.openupdater/backups/` before activating the new package. Installation is staged first, so a failed activation attempts to restore the previous package automatically.
+
+The install command prints the backup path when a previous package was replaced. Restore it with:
+
+    openupdater rollback ./updates/.openupdater/backups/DemoApp-1.4.0.zip.<timestamp>.bak ./updates/DemoApp-1.4.0.zip
 
 Install and verify a package:
 
