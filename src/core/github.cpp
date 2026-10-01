@@ -466,7 +466,7 @@ GitHubRelease GitHubReleasesProvider::latest_compatible(
             else
                 digest.clear();
 
-            matches.push_back({version, tag, name, url, digest});
+            matches.push_back({version, tag, name, url, digest, signature_url_for_asset(json, name)});
         }
 
         if (matches.empty()) {
