@@ -1,9 +1,11 @@
 #include "openupdater/core/updater.hpp"
 
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
