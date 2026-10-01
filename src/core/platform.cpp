@@ -90,7 +90,7 @@ bool has_token(const std::string& name, std::string_view token) {
 bool asset_matches_platform(
     std::string_view asset_name,
     Platform platform,
-    Architecture architecture) noexcept {
+    Architecture architecture) {
 
     if (platform == Platform::Unknown || architecture == Architecture::Unknown)
         return false;
