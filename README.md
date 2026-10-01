@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v1.2.0 — Update discovery
+v1.3.0 — Update selection
 
 Features:
 - semantic numeric version comparison;
@@ -26,6 +26,7 @@ Features:
 - runtime platform and architecture detection;
 - platform/architecture-aware GitHub release asset selection;
 - multi-component update discovery without installation;
+- core-level selection and selective installation of discovered updates;
 - asynchronous GUI operations;
 - local package installation;
 - command-line interface;
@@ -114,6 +115,28 @@ New integrations should use the v1.0 high-level API:
 The request defaults to backup, automatic rollback, and digest verification when a digest is available. Operation failures are reported as `openupdater::UpdateError` with a typed `ErrorCode`.
 
 See `docs/API.md` for the stable API contract and compatibility notes.
+
+### Update selection
+
+OpenUpdater 1.3 adds selection between discovery and installation. Selection is part of the core API, so GUI, CLI and other clients can use the same policy.
+
+    openupdater::UpdateSelection selection;
+    selection.select("Core");
+    selection.select("Plugins");
+    selection.deselect("GUI");
+
+    openupdater::SelectedUpdateRequest request{
+        discovered_updates,
+        selection,
+        "./updates"
+    };
+
+    const auto reports =
+        openupdater::Updater::update_selected(request);
+
+Only components explicitly selected by the caller are downloaded and installed. Selecting a component that is not present in the discovery result is rejected. An empty selection is also rejected, preventing an accidental batch installation.
+
+The selected-update flow keeps the existing SHA-256 verification, backup, rollback and staging policies from UpdateOptions.
 
 ### Multi-platform assets
 
