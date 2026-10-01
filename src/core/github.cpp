@@ -183,6 +183,28 @@ void validate_repository(const std::string& repository) {
     }
 }
 
+
+bool is_preferred_installer_asset(
+    const std::string& name,
+    Platform platform) {
+
+    const auto ends_with = [&](std::string_view suffix) {
+        return name.size() >= suffix.size() &&
+               name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
+    };
+
+    switch (platform) {
+    case Platform::Windows:
+        return ends_with(".exe");
+    case Platform::Linux:
+        return ends_with(".AppImage") || ends_with(".tar.gz");
+    case Platform::MacOS:
+        return ends_with(".dmg") || ends_with(".pkg") || ends_with(".tar.gz");
+    default:
+        return false;
+    }
+}
+
 std::filesystem::path make_temp_path() {
     const auto now =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -478,9 +500,18 @@ GitHubRelease GitHubReleasesProvider::latest_compatible(
         }
 
         if (matches.size() > 1) {
-            throw std::runtime_error(
-                "Multiple compatible GitHub assets found for component " +
-                component + "; use the exact asset API.");
+            std::vector<GitHubRelease> preferred;
+            for (const auto& match : matches) {
+                if (is_preferred_installer_asset(match.asset, platform))
+                    preferred.push_back(match);
+            }
+
+            if (preferred.size() == 1)
+                matches = std::move(preferred);
+            else
+                throw std::runtime_error(
+                    "Multiple compatible GitHub assets found for component " +
+                    component + "; use the exact asset API.");
         }
 
         cleanup();
