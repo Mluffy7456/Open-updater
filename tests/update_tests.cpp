@@ -8,8 +8,8 @@
 int main() {
     using namespace openupdater;
 
-    static_assert(API_VERSION_MAJOR == 1);
-    static_assert(API_VERSION_MINOR == 4);
+    static_assert(API_VERSION_MAJOR == 2);
+    static_assert(API_VERSION_MINOR == 0);
     static_assert(API_VERSION_PATCH == 0);
 
     const UpdateRequest request{
