@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QCheckBox>
+#include <QFrame>
 #include <QFutureWatcher>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -171,7 +172,7 @@ private:
                         .arg(QString::fromStdString(update.available_version)));
 
                 auto* meta = new QLabel(
-                    QString("%1  ·  %2%3")
+                    QString("%1  ·  %2%3%4")
                         .arg(QString::fromStdString(
                             openupdater::update_source_name(update.source)))
                         .arg(QString::fromStdString(update.publisher.empty()
@@ -179,6 +180,9 @@ private:
                             : update.publisher))
                         .arg(update.requires_restart
                             ? "  ·  restart may be required"
+                            : "")
+                        .arg(update.requires_admin
+                            ? "  ·  administrator approval may be required"
                             : ""),
                     box);
                 meta->setObjectName("meta");
