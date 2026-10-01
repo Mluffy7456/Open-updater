@@ -8,6 +8,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace openupdater {
 
