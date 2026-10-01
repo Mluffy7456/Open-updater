@@ -11,6 +11,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QProgressBar>
 #include <QProcess>
 #include <QStandardPaths>
