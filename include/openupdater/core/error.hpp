@@ -12,7 +12,9 @@ enum class ErrorCode {
     DownloadFailed,
     VerificationFailed,
     InstallationFailed,
-    RollbackFailed
+    RollbackFailed,
+    DependencyFailed,
+    TransactionFailed
 };
 
 class UpdateError final : public std::runtime_error {
@@ -20,9 +22,7 @@ public:
     UpdateError(ErrorCode code, const std::string& message)
         : std::runtime_error(message), code_(code) {}
 
-    [[nodiscard]] ErrorCode code() const noexcept {
-        return code_;
-    }
+    [[nodiscard]] ErrorCode code() const noexcept { return code_; }
 
 private:
     ErrorCode code_;
