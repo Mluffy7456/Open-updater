@@ -1,4 +1,4 @@
-# OpenUpdater 1.3 API
+# OpenUpdater 1.4 API
 
 OpenUpdater 1.0 exposes a stable C++20 core API. The GUI and CLI are clients of the same core library.
 
@@ -11,7 +11,7 @@ Use the compile-time API version constants:
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-The 1.3 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+The 1.4 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
 
 ## Platform and architecture
 
@@ -50,6 +50,25 @@ AvailableUpdate contains:
 - download_url.
 
 Discovery performs only metadata retrieval. It does not download packages, create backups, or install anything. The returned vector is intended for a later selection/installation stage.
+
+## Package signatures
+
+OpenUpdater 1.4 supports detached Ed25519 signatures over the raw 32-byte SHA-256 digest of an update package.
+
+GitHub asset discovery recognizes a sibling signature asset named:
+
+    <asset-name>.sig
+
+AvailableUpdate.signature_url contains the URL of that signature asset when present.
+
+SignatureVerifier::verify_ed25519_sha256 verifies a 64-byte Ed25519 signature represented as 128 hexadecimal characters using a 32-byte trusted public key represented as 64 hexadecimal characters.
+
+UpdateOptions adds:
+
+- verify_signature — enables signature verification;
+- trusted_public_key — trusted Ed25519 public key supplied by the application.
+
+Signature verification is performed after download and SHA-256 verification, but before backup and installation. The public key is never downloaded from GitHub.
 
 ## Update selection
 
