@@ -125,6 +125,7 @@ jobs:
             "Qt6Core.dll",
             "Qt6Gui.dll",
             "Qt6Widgets.dll",
+            "Qt6Svg.dll",
             "platforms/qwindows.dll"
           )) {
             if (-not ($entries -match [regex]::Escape($required))) {
