@@ -170,8 +170,7 @@ std::string WinGetProvider::name() const {
 
 bool WinGetProvider::available() const {
 #ifdef _WIN32
-    const auto result = run_winget(
-        "--version --disable-interactivity");
+    const auto result = run_winget("--version");
     return result.exit_code == 0 && !result.output.empty();
 #else
     return false;
