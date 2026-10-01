@@ -267,6 +267,67 @@ void Downloader::download(
 #endif
 }
 
+
+std::vector<AvailableUpdate> Updater::discover_updates(
+    const UpdateDiscoveryRequest& request) {
+
+    if (request.repository.empty() ||
+        request.repository.find('/') == std::string::npos) {
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "GitHub repository must use the owner/repository format.");
+    }
+
+    if (request.targets.empty())
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "At least one update target is required.");
+
+    if (request.platform == Platform::Unknown ||
+        request.architecture == Architecture::Unknown) {
+        throw UpdateError(
+            ErrorCode::InvalidArgument,
+            "Platform and architecture must be known.");
+    }
+
+    try {
+        for (const auto& target : request.targets) {
+            if (target.component.empty())
+                throw UpdateError(
+                    ErrorCode::InvalidArgument,
+                    "Update component name cannot be empty.");
+
+            if (!target.current.valid())
+                throw UpdateError(
+                    ErrorCode::InvalidVersion,
+                    "Update target has an invalid current version.");
+        }
+
+        const auto candidates = GitHubReleasesProvider::discover(
+            request.repository,
+            request.targets,
+            request.platform,
+            request.architecture,
+            request.headers);
+
+        std::vector<AvailableUpdate> result;
+        result.reserve(candidates.size());
+
+        for (const auto& candidate : candidates) {
+            if (candidate.available > candidate.current)
+                result.push_back(candidate);
+        }
+
+        return result;
+    } catch (const UpdateError&) {
+        throw;
+    } catch (const std::exception& error) {
+        throw UpdateError(
+            ErrorCode::UpdateCheckFailed,
+            error.what());
+    }
+}
+
 UpdateCheck Updater::check(const Version& current, const Manifest& manifest) {
     if (!current.valid())
         throw std::runtime_error("Current version is invalid.");
