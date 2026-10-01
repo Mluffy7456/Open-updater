@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.0] - 2026-10-01
+
+### Added
+- Ed25519 detached package signature verification.
+- SHA-256 digest based signature verification using OpenSSL.
+- GitHub discovery of matching <asset>.sig release assets.
+- Signature policy in UpdateOptions.
+- CLI verify-signature command.
+- Signature verification tests using an Ed25519 test vector.
+
+### Changed
+- Public API and project version updated to 1.4.0.
+- CI now installs OpenSSL on Linux and Windows.
+
+
 ## [1.3.0] - 2026-10-01
 
 ### Added
