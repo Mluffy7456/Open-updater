@@ -1,3 +1,4 @@
+#include "openupdater/core/github.hpp"
 #include "openupdater/core/manifest.hpp"
 #include "openupdater/core/updater.hpp"
 #include "openupdater/core/version.hpp"
@@ -10,13 +11,14 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 0.2.1\n"
+        << "OpenUpdater 0.3.0\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
         << "  openupdater install <package> <destination> [sha256]\n"
         << "  openupdater verify <package> <sha256>\n"
-        << "  openupdater download <url> <destination>\n";
+        << "  openupdater download <url> <destination>\n"
+        << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n";
 }
 
 } // namespace
@@ -65,6 +67,24 @@ int main(int argc, char* argv[]) {
             }
 
             std::cout << "Already up to date.\n";
+            return 0;
+        }
+
+        if (command == "github") {
+            if (argc != 5 && argc != 6) {
+                print_usage();
+                return 1;
+            }
+
+            const std::string expected_sha256 = argc == 6 ? argv[5] : "";
+            const auto release = openupdater::GitHubReleasesProvider::download_latest(
+                argv[2], argv[3], argv[4], expected_sha256);
+
+            std::cout << "Release: " << release.tag << '\n';
+            std::cout << "Asset:   " << release.asset << '\n';
+            if (!release.sha256.empty())
+                std::cout << "SHA-256: " << release.sha256 << '\n';
+            std::cout << "GitHub asset downloaded successfully.\n";
             return 0;
         }
 
