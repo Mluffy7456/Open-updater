@@ -177,7 +177,8 @@ std::filesystem::path make_temp_path() {
 
 GitHubRelease GitHubReleasesProvider::latest(
     const std::string& repository,
-    const std::string& asset_name) {
+    const std::string& asset_name,
+    const ApiHttpHeaders& custom_headers) {
 
     validate_repository(repository);
 
@@ -194,10 +195,11 @@ GitHubRelease GitHubReleasesProvider::latest(
         const auto api_url =
             "https://api.github.com/repos/" + repository + "/releases/latest";
 
-        const HttpHeaders headers{
+        HttpHeaders headers{
             {"Accept", "application/vnd.github+json"},
             {"X-GitHub-Api-Version", "2026-03-10"},
-            {"User-Agent", "OpenUpdater"}};
+            {"User-Agent", "OpenUpdater/1.0"}};
+        headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
 
         Downloader::download(api_url, metadata_path, headers);
 
@@ -252,10 +254,16 @@ GitHubRelease GitHubReleasesProvider::download_latest(
     const std::string& repository,
     const std::string& asset_name,
     const std::filesystem::path& destination,
-    const std::string& expected_sha256) {
+    const std::string& expected_sha256,
+    const ApiHttpHeaders& custom_headers) {
 
-    const auto release = latest(repository, asset_name);
-    Downloader::download(release.download_url, destination);
+    const auto release = latest(repository, asset_name, custom_headers);
+
+    HttpHeaders headers{
+        {"Accept", "application/octet-stream"},
+        {"User-Agent", "OpenUpdater/1.0"}};
+    headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
+    Downloader::download(release.download_url, destination, headers);
 
     const auto digest = expected_sha256.empty()
         ? release.sha256
