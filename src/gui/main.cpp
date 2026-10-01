@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr auto kVersion = "2.1.0";
+constexpr auto kVersion = openupdater::API_VERSION;
 
 class MainWindow final : public QMainWindow {
 public:
