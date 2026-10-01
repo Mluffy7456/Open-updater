@@ -86,14 +86,14 @@ if(WIN32)
 
     if(OPENUPDATER_BUILD_GUI)
         install(TARGETS openupdater RUNTIME DESTINATION .)
-        install(DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/" DESTINATION .
+        install(DIRECTORY "${CMAKE_BINARY_DIR}/Release/" DESTINATION .
             FILES_MATCHING
             PATTERN "Qt6*.dll"
             PATTERN "D3Dcompiler_47.dll"
             PATTERN "opengl32sw.dll"
         )
-        install(DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/platforms/" DESTINATION platforms OPTIONAL)
-        install(DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/styles/" DESTINATION styles OPTIONAL)
+        install(DIRECTORY "${CMAKE_BINARY_DIR}/Release/platforms/" DESTINATION platforms OPTIONAL)
+        install(DIRECTORY "${CMAKE_BINARY_DIR}/Release/styles/" DESTINATION styles OPTIONAL)
     endif()
 
     set(CPACK_PACKAGE_NAME "OpenUpdater")
