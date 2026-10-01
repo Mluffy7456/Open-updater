@@ -22,7 +22,7 @@ jobs:
         shell: pwsh
         run: |
           $project = Get-Content "CMakeLists.txt" -Raw
-          if ($project -notmatch 'project\\(OpenUpdater VERSION ([0-9]+\\.[0-9]+\\.[0-9]+)') {
+          if ($project -notmatch 'project\(OpenUpdater VERSION ([0-9]+\.[0-9]+\.[0-9]+)') {
             throw "Unable to determine OpenUpdater project version."
           }
 
