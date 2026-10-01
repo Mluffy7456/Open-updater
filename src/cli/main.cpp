@@ -10,11 +10,12 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 0.1.0\n"
+        << "OpenUpdater 0.2.1\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
-        << "  openupdater install <package> <destination>\n"
+        << "  openupdater install <package> <destination> [sha256]\n"
+        << "  openupdater verify <package> <sha256>\n"
         << "  openupdater download <url> <destination>\n";
 }
 
@@ -74,7 +75,7 @@ int main(int argc, char* argv[]) {
             }
 
             openupdater::Downloader::download(argv[2], argv[3]);
-            std::cout << "Download completed successfully.\\n";
+            std::cout << "Download completed successfully.\n";
             return 0;
         }
 
@@ -84,8 +85,27 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            openupdater::Updater::install(argv[2], argv[3]);
+            const std::string expected_sha256 = argc == 5 ? argv[4] : "";
+            openupdater::Updater::install(argv[2], argv[3], expected_sha256);
             std::cout << "Package installed successfully.\n";
+            return 0;
+        }
+
+        if (command == "verify") {
+            if (argc != 4) {
+                print_usage();
+                return 1;
+            }
+
+            const auto actual = openupdater::Sha256::hash_file(argv[2]);
+            std::cout << "SHA-256: " << actual << '\n';
+
+            if (!openupdater::verify_sha256(argv[2], argv[3])) {
+                std::cerr << "SHA-256 verification failed.\n";
+                return 3;
+            }
+
+            std::cout << "SHA-256 verification passed.\n";
             return 0;
         }
 
