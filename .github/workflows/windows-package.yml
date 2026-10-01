@@ -16,7 +16,15 @@ jobs:
       - name: Install OpenSSL and NSIS
         shell: pwsh
         run: |
-          choco install openssl.light nsis -y --no-progress
+          choco install openssl.light nsis imagemagick.app -y --no-progress
+
+      - name: Prepare Windows assets
+        shell: pwsh
+        run: |
+          magick assets/openupdater.svg -background none -define icon:auto-resize=256,128,64,48,32,16 assets/openupdater.ico
+          if (-not (Test-Path "assets/openupdater.ico")) {
+            throw "Application icon was not generated."
+          }
 
       - name: Configure
         shell: pwsh
@@ -40,6 +48,44 @@ jobs:
           }
           if (-not (Test-Path "OpenUpdater-2.0.0-windows-x64.zip")) {
             throw "Portable ZIP was not generated."
+          }
+
+          $zip = "OpenUpdater-2.0.0-windows-x64.zip"
+          $entries = tar -tf $zip
+          if (-not ($entries -match "openupdater.exe")) {
+            throw "Portable package does not contain openupdater.exe."
+          }
+          if (-not ($entries -match "libcrypto-3-x64.dll")) {
+            throw "Portable package does not contain libcrypto-3-x64.dll."
+          }
+
+      - name: Test installer
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP "OpenUpdaterInstalled"
+          if (Test-Path $installDir) {
+            Remove-Item $installDir -Recurse -Force
+          }
+
+          $process = Start-Process -FilePath ".\OpenUpdater-2.0.0-windows-x64.exe" -ArgumentList "/S", "/D=$installDir" -Wait -PassThru
+
+          if ($process.ExitCode -ne 0) {
+            throw "Installer exited with code $($process.ExitCode)."
+          }
+
+          $installedExe = Join-Path $installDir "openupdater.exe"
+          $installedDll = Join-Path $installDir "libcrypto-3-x64.dll"
+
+          if (-not (Test-Path $installedExe)) {
+            throw "Installer did not install openupdater.exe."
+          }
+          if (-not (Test-Path $installedDll)) {
+            throw "Installer did not install libcrypto-3-x64.dll."
+          }
+
+          & $installedExe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed OpenUpdater failed to start."
           }
 
       - name: Upload Windows packages
