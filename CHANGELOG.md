@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0] - 2026-10-01
+
+### Added
+- Optional Qt 6 desktop GUI.
+- GUI fields for current version, repository, release asset, destination and SHA-256.
+- Asynchronous update checking.
+- Asynchronous update installation.
+- GUI display of generated backup paths.
+- CMake option OPENUPDATER_BUILD_GUI.
+
+### Changed
+- Project version updated to 0.6.0.
+
+# Changelog
+
 ## [0.5.0] - 2026-10-01
 
 ### Added

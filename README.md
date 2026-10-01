@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.5.0 — Silent Update
+v0.6.0 — GUI
 
 Features:
 - semantic numeric version comparison;
@@ -18,6 +18,8 @@ Features:
 - rollback of a previous installation;
 - unattended update flow from GitHub Releases;
 - silent CLI mode for automation/background execution;
+- optional Qt 6 desktop GUI;
+- asynchronous GUI operations;
 - local package installation;
 - command-line interface;
 - CMake build;
