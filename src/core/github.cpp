@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -23,7 +24,7 @@ std::string decode_json_string(std::string_view value) {
     bool escaped = false;
     for (const char character : value) {
         if (!escaped) {
-            if (character == '\')
+            if (character == '\\')
                 escaped = true;
             else
                 result += character;
@@ -32,7 +33,7 @@ std::string decode_json_string(std::string_view value) {
 
         switch (character) {
         case '"': result += '"'; break;
-        case '\': result += '\'; break;
+        case '\\': result += '\\'; break;
         case '/': result += '/'; break;
         case 'b': result += '\b'; break;
         case 'f': result += '\f'; break;
@@ -55,7 +56,7 @@ std::string decode_json_string(std::string_view value) {
 std::string json_string(const std::string& json, std::string_view key,
                         std::size_t start = 0) {
     const auto key_position = json.find(
-        std::string(""") + std::string(key) + """, start);
+        std::string("\"") + std::string(key) + "\"", start);
 
     if (key_position == std::string::npos)
         return {};
@@ -83,7 +84,7 @@ std::string json_string(const std::string& json, std::string_view key,
             return decode_json_string(
                 std::string_view(json).substr(begin, position - begin));
 
-        if (!escaped && json[position] == '\')
+        if (!escaped && json[position] == '\\')
             escaped = true;
         else
             escaped = false;
@@ -95,7 +96,7 @@ std::string json_string(const std::string& json, std::string_view key,
 }
 
 std::vector<std::string_view> asset_objects(const std::string& json) {
-    const auto assets_key = json.find(""assets"");
+    const auto assets_key = json.find("\"assets\"");
     if (assets_key == std::string::npos)
         throw std::runtime_error("GitHub release response has no assets.");
 
@@ -116,7 +117,7 @@ std::vector<std::string_view> asset_objects(const std::string& json) {
         if (in_string) {
             if (!escaped && character == '"')
                 in_string = false;
-            else if (!escaped && character == '\')
+            else if (!escaped && character == '\\')
                 escaped = true;
             else
                 escaped = false;
@@ -164,13 +165,12 @@ void validate_repository(const std::string& repository) {
     }
 }
 
-std::string make_temp_path() {
+std::filesystem::path make_temp_path() {
     const auto now =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
-    return (
-        std::filesystem::temp_directory_path() /
-        ("openupdater_github_" + std::to_string(now) + ".json")).string();
+    return std::filesystem::temp_directory_path() /
+        ("openupdater_github_" + std::to_string(now) + ".json");
 }
 
 } // namespace
@@ -184,7 +184,7 @@ GitHubRelease GitHubReleasesProvider::latest(
     if (asset_name.empty())
         throw std::invalid_argument("GitHub asset name cannot be empty.");
 
-    const auto metadata_path = std::filesystem::path(make_temp_path());
+    const auto metadata_path = make_temp_path();
     const auto cleanup = [&]() {
         std::error_code error;
         std::filesystem::remove(metadata_path, error);
@@ -206,7 +206,7 @@ GitHubRelease GitHubReleasesProvider::latest(
             throw std::runtime_error("Cannot open GitHub release metadata.");
 
         const std::string json(
-            (std::istreambuf_iterator<char>(input)),
+            std::istreambuf_iterator<char>(input),
             std::istreambuf_iterator<char>());
 
         const auto tag = json_string(json, "tag_name");
@@ -219,17 +219,18 @@ GitHubRelease GitHubReleasesProvider::latest(
                 "GitHub release tag is not a valid version: " + tag);
 
         for (const auto object : asset_objects(json)) {
-            const auto name = json_string(std::string(object), "name");
+            const std::string object_json(object);
+            const auto name = json_string(object_json, "name");
             if (name != asset_name)
                 continue;
 
             const auto url = json_string(
-                std::string(object), "browser_download_url");
+                object_json, "browser_download_url");
             if (url.empty())
                 throw std::runtime_error(
                     "GitHub asset has no browser_download_url.");
 
-            auto digest = json_string(std::string(object), "digest");
+            auto digest = json_string(object_json, "digest");
             if (digest.rfind("sha256:", 0) == 0)
                 digest.erase(0, 7);
             else
