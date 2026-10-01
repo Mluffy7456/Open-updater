@@ -156,6 +156,23 @@ std::vector<std::string_view> asset_objects(const std::string& json) {
     return objects;
 }
 
+std::string signature_url_for_asset(
+    const std::string& json,
+    const std::string& asset_name) {
+
+    const auto signature_name = asset_name + ".sig";
+
+    for (const auto object : asset_objects(json)) {
+        const std::string object_json(object);
+        if (json_string(object_json, "name") != signature_name)
+            continue;
+
+        return json_string(object_json, "browser_download_url");
+    }
+
+    return {};
+}
+
 void validate_repository(const std::string& repository) {
     const auto slash = repository.find('/');
     if (slash == std::string::npos || slash == 0 ||
@@ -240,7 +257,7 @@ GitHubRelease GitHubReleasesProvider::latest(
                 digest.clear();
 
             cleanup();
-            return GitHubRelease{version, tag, name, url, digest};
+            return GitHubRelease{version, tag, name, url, digest, signature_url_for_asset(json, name)};
         }
 
         throw std::runtime_error(
@@ -341,7 +358,7 @@ std::vector<AvailableUpdate> GitHubReleasesProvider::discover(
                 else
                     digest.clear();
 
-                matches.push_back({version, tag, name, url, digest});
+                matches.push_back({version, tag, name, url, digest, signature_url_for_asset(json, name)});
             }
 
             if (matches.empty())
@@ -361,6 +378,7 @@ std::vector<AvailableUpdate> GitHubReleasesProvider::discover(
                 std::string(platform_name(platform)),
                 std::string(architecture_name(architecture)),
                 match.sha256,
+                match.signature_url,
                 match.download_url
             });
         }
