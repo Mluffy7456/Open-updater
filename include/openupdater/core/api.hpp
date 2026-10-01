@@ -2,6 +2,7 @@
 
 #include "openupdater/core/error.hpp"
 #include "openupdater/core/platform.hpp"
+#include "openupdater/core/signature.hpp"
 #include "openupdater/core/version.hpp"
 
 #include <filesystem>
@@ -27,6 +28,8 @@ struct UpdateOptions {
     bool backup_existing = true;
     bool automatic_rollback = true;
     bool verify_download = true;
+    bool verify_signature = false;
+    std::string trusted_public_key{};
     ApiHttpHeaders headers{};
 };
 
@@ -44,6 +47,7 @@ struct AvailableUpdate {
     std::string platform;
     std::string architecture;
     std::string sha256;
+    std::string signature_url;
     std::string download_url;
 };
 
