@@ -156,4 +156,8 @@ if(BUILD_TESTING)
     add_executable(openupdater_manager_tests tests/manager_tests.cpp)
     target_link_libraries(openupdater_manager_tests PRIVATE openupdater_core)
     add_test(NAME openupdater_manager_tests COMMAND openupdater_manager_tests)
+
+    add_executable(openupdater_universal_tests tests/universal_tests.cpp)
+    target_link_libraries(openupdater_universal_tests PRIVATE openupdater_core)
+    add_test(NAME openupdater_universal_tests COMMAND openupdater_universal_tests)
 endif()
