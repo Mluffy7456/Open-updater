@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.6.0 — GUI
+v1.0.0 — Stable updater API
 
 Features:
 - semantic numeric version comparison;
@@ -19,6 +19,10 @@ Features:
 - unattended update flow from GitHub Releases;
 - silent CLI mode for automation/background execution;
 - optional Qt 6 desktop GUI;
+- stable C++20 high-level updater API;
+- typed updater errors via UpdateError;
+- configurable backup, rollback and verification policy;
+- configurable GitHub HTTP headers;
 - asynchronous GUI operations;
 - local package installation;
 - command-line interface;
@@ -88,6 +92,25 @@ For background/automation use, suppress normal status output:
     openupdater update --silent 1.2.0 owner/repository DemoApp-1.4.0.zip ./updates
 
 The update command first checks the latest published release version. If it is newer than the current version, the asset is downloaded into OpenUpdater staging, verified, and installed through the v0.4.0 backup/rollback flow. If no update is needed, nothing is downloaded. The command is non-interactive and never asks for confirmation.
+
+## C++ API
+
+New integrations should use the v1.0 high-level API:
+
+    #include "openupdater/core/updater.hpp"
+
+    openupdater::UpdateRequest request{
+        openupdater::Version("1.2.0"),
+        "owner/repository",
+        "DemoApp-1.3.0.zip",
+        "./updates"
+    };
+
+    const auto result = openupdater::Updater::update(request);
+
+The request defaults to backup, automatic rollback, and digest verification when a digest is available. Operation failures are reported as `openupdater::UpdateError` with a typed `ErrorCode`.
+
+See `docs/API.md` for the stable API contract and compatibility notes.
 
 Exit codes for update:
 - 0 — update installed;
