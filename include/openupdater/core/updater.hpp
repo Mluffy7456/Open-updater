@@ -26,6 +26,25 @@ struct UpdateResult {
 
 using HttpHeaders = std::vector<std::pair<std::string, std::string>>;
 
+struct UpdateManagerRequest {
+    std::vector<AvailableUpdate> updates;
+    UpdateSelection selection;
+    std::vector<ComponentMetadata> metadata;
+    std::vector<UpdateTarget> installed;
+    std::filesystem::path destination;
+    UpdateOptions options{};
+};
+
+struct UpdatePlan {
+    std::vector<AvailableUpdate> updates;
+    std::vector<std::string> install_order;
+};
+
+struct UpdateTransactionReport {
+    std::vector<UpdateReport> reports;
+    std::vector<std::string> install_order;
+};
+
 class Downloader {
 public:
     static void download(
@@ -41,6 +60,12 @@ public:
 
     [[nodiscard]] static std::vector<UpdateReport> update_selected(
         const SelectedUpdateRequest& request);
+
+    [[nodiscard]] static UpdatePlan build_plan(
+        const UpdateManagerRequest& request);
+
+    [[nodiscard]] static UpdateTransactionReport apply_plan(
+        const UpdateManagerRequest& request);
 
     [[nodiscard]] static UpdateCheck check(
         const Version& current,
