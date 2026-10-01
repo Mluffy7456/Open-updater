@@ -4,20 +4,19 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.1.0 — Foundation
-
-The first version deliberately keeps the core small and dependency-free.
+v0.2.0 — HTTP/HTTPS Downloader
 
 Features:
 - semantic numeric version comparison;
 - update manifest parsing;
 - update availability checks;
+- HTTP/HTTPS file downloading;
 - local package installation;
 - command-line interface;
 - CMake build;
 - Ubuntu and Windows CI.
 
-Network transport, package verification, rollback, and GUI are planned for later versions.
+Windows uses the native WinHTTP API. Linux uses libcurl.
 
 ## Build
 
@@ -25,6 +24,7 @@ Requirements:
 - C++20 compiler
 - CMake 3.20+
 - Git
+- libcurl development package on Linux
 
 Build:
 
@@ -41,6 +41,10 @@ Check a version:
 Check for an update:
 
     openupdater check 1.2.0 examples/manifest.ff
+
+Download an update:
+
+    openupdater download https://example.com/DemoApp-1.4.0.zip ./DemoApp-1.4.0.zip
 
 Install a local package:
 
