@@ -3,6 +3,7 @@
 #include "openupdater/core/backup.hpp"
 #include "openupdater/core/updater.hpp"
 #include "openupdater/core/version.hpp"
+#include "openupdater/core/api.hpp"
 
 #include <iostream>
 #include <stdexcept>
