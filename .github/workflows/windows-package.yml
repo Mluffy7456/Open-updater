@@ -1,0 +1,51 @@
+name: OpenUpdater Windows Package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install OpenSSL and NSIS
+        shell: pwsh
+        run: |
+          choco install openssl.light nsis -y --no-progress
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL" -DBUILD_TESTING=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Package
+        shell: pwsh
+        run: |
+          cpack --config build/CPackConfig.cmake -G NSIS
+          cpack --config build/CPackConfig.cmake -G ZIP
+
+      - name: Verify packages
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "OpenUpdater-2.0.0-windows-x64.exe")) {
+            throw "Installer was not generated."
+          }
+          if (-not (Test-Path "OpenUpdater-2.0.0-windows-x64.zip")) {
+            throw "Portable ZIP was not generated."
+          }
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenUpdater-Windows-x64
+          path: |
+            OpenUpdater-2.0.0-windows-x64.exe
+            OpenUpdater-2.0.0-windows-x64.zip
