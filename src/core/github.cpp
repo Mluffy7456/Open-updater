@@ -205,9 +205,9 @@ GitHubRelease GitHubReleasesProvider::latest(
         if (!input)
             throw std::runtime_error("Cannot open GitHub release metadata.");
 
-        const std::string json(
+        const std::string json{
             std::istreambuf_iterator<char>(input),
-            std::istreambuf_iterator<char>());
+            std::istreambuf_iterator<char>()};
 
         const auto tag = json_string(json, "tag_name");
         if (tag.empty())
@@ -237,7 +237,7 @@ GitHubRelease GitHubReleasesProvider::latest(
                 digest.clear();
 
             cleanup();
-            return {version, tag, name, url, digest};
+            return GitHubRelease{version, tag, name, url, digest};
         }
 
         throw std::runtime_error(
