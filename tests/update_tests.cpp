@@ -9,7 +9,7 @@ int main() {
     using namespace openupdater;
 
     static_assert(API_VERSION_MAJOR == 1);
-    static_assert(API_VERSION_MINOR == 2);
+    static_assert(API_VERSION_MINOR == 3);
     static_assert(API_VERSION_PATCH == 0);
 
     const UpdateRequest request{
@@ -39,6 +39,48 @@ int main() {
     assert(discovery_request.targets.size() == 2);
     assert(discovery_request.targets[0].component == "Core");
     assert(discovery_request.targets[1].current == Version("2.3.0"));
+
+    const std::vector<AvailableUpdate> discovered{
+        {
+            "Core",
+            Version("1.0.0"),
+            Version("1.4.0"),
+            "Core-windows-x64.zip",
+            "windows",
+            "x64",
+            "abc",
+            "https://example.invalid/core.zip"
+        },
+        {
+            "GUI",
+            Version("2.0.0"),
+            Version("2.3.0"),
+            "GUI-windows-x64.zip",
+            "windows",
+            "x64",
+            "def",
+            "https://example.invalid/gui.zip"
+        }
+    };
+
+    UpdateSelection selection;
+    assert(selection.empty());
+    selection.select("Core");
+    selection.select("Core");
+    assert(selection.selected("Core"));
+    assert(selection.components.size() == 1);
+    selection.select("GUI");
+    assert(selection.components.size() == 2);
+    selection.deselect("Core");
+    assert(!selection.selected("Core"));
+    assert(selection.selected("GUI"));
+    selection.select_all(discovered);
+    assert(selection.components.size() == 2);
+    assert(selection.selected("Core"));
+    assert(selection.selected("GUI"));
+    selection.clear();
+    assert(selection.empty());
+
 
 
     const auto platform = current_platform();
