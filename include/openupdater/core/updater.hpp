@@ -1,5 +1,6 @@
 #pragma once
 
+#include "openupdater/core/api.hpp"
 #include "openupdater/core/manifest.hpp"
 #include "openupdater/core/sha256.hpp"
 
@@ -9,11 +10,6 @@
 #include <vector>
 
 namespace openupdater {
-
-enum class UpdateState {
-    UpToDate,
-    UpdateAvailable
-};
 
 struct UpdateCheck {
     Version current;
@@ -55,6 +51,9 @@ public:
         const std::string& asset_name,
         const std::filesystem::path& destination,
         const std::string& expected_sha256 = {});
+
+    [[nodiscard]] static UpdateReport update(
+        const UpdateRequest& request);
 };
 
 } // namespace openupdater
