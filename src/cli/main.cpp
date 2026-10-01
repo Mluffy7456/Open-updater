@@ -1,5 +1,6 @@
 #include "openupdater/core/github.hpp"
 #include "openupdater/core/manifest.hpp"
+#include "openupdater/core/backup.hpp"
 #include "openupdater/core/updater.hpp"
 #include "openupdater/core/version.hpp"
 
@@ -11,11 +12,11 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 0.3.0\n"
+        << "OpenUpdater 0.4.0\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
-        << "  openupdater install <package> <destination> [sha256]\n"
+        << "  openupdater install <package> <destination> [sha256]\n        << "  openupdater rollback <backup> <destination>\n"
         << "  openupdater verify <package> <sha256>\n"
         << "  openupdater download <url> <destination>\n"
         << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n";
@@ -106,8 +107,23 @@ int main(int argc, char* argv[]) {
             }
 
             const std::string expected_sha256 = argc == 5 ? argv[4] : "";
-            openupdater::Updater::install(argv[2], argv[3], expected_sha256);
+            const auto backup = openupdater::Updater::install(
+                argv[2], argv[3], expected_sha256);
+
             std::cout << "Package installed successfully.\n";
+            if (!backup.empty())
+                std::cout << "Backup: " << backup.string() << '\n';
+            return 0;
+        }
+
+        if (command == "rollback") {
+            if (argc != 4) {
+                print_usage();
+                return 1;
+            }
+
+            openupdater::BackupManager::rollback(argv[2], argv[3]);
+            std::cout << "Rollback completed successfully.\n";
             return 0;
         }
 
