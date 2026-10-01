@@ -251,9 +251,9 @@ On Windows, the first providers are:
 - **WinGet** — installed applications and developer tools that are available through the Windows Package Manager;
 - **Windows Update** — applicable driver updates returned by the Windows Update Agent API.
 
-WinGet is used for both ordinary applications and programming/developer tools such as Python, Node.js, Git, .NET, Java, CMake, LLVM/Clang and Visual Studio components when their package metadata identifies them accordingly. WinGet provides an official `upgrade` operation for listing available upgrades and an exact-ID upgrade operation for selected packages. citeturn0search0turn1search2
+WinGet is used for both ordinary applications and programming/developer tools such as Python, Node.js, Git, .NET, Java, CMake, LLVM/Clang and Visual Studio components when their package metadata identifies them accordingly. WinGet provides an official `upgrade` operation for listing available upgrades and an exact-ID upgrade operation for selected packages.
 
-Driver discovery uses the Windows Update Agent rather than downloading driver packages from arbitrary websites. The WUA API supports searches by `Type='Driver'` and exposes driver-specific metadata through `IWindowsDriverUpdate`. citeturn4search0turn4search1turn5search7
+Driver discovery uses the Windows Update Agent rather than downloading driver packages from arbitrary websites. The WUA API supports searches by `Type='Driver'` and exposes driver-specific metadata through `IWindowsDriverUpdate`.
 
 The architecture is intentionally extensible. Linux package managers (`pacman`, `apt`, `dnf`, `zypper`, Flatpak) and macOS package managers can be added as providers without changing the GUI or normalized update model. Driver providers for vendor-specific channels can also be added later, but they should use official vendor sources.
 
