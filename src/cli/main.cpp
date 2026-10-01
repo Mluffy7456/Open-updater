@@ -12,7 +12,7 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 2.0.0\n"
+        << "OpenUpdater " << openupdater::API_VERSION << "\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
