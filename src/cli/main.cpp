@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (command == "install") {
-            if (argc != 4) {
+            if (argc != 4 && argc != 5) {
                 print_usage();
                 return 1;
             }
