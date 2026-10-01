@@ -742,6 +742,12 @@ UpdatePlan Updater::build_plan(const UpdateManagerRequest& request) {
         const auto* update = update_it->second;
         const auto* metadata = metadata_it->second;
 
+        if (update->available <= update->current)
+            throw UpdateError(
+                ErrorCode::InvalidArgument,
+                "Available update is not newer than the installed version: " +
+                component);
+
         if (metadata->version != update->available)
             throw UpdateError(
                 ErrorCode::DependencyFailed,
@@ -758,18 +764,18 @@ UpdatePlan Updater::build_plan(const UpdateManagerRequest& request) {
             if (dependency_update_it != updates_by_component.end()) {
                 const auto* dependency_update = dependency_update_it->second;
 
-                if (dependency_update->available < dependency.minimum_version) {
-                    if (installed_it == installed_versions.end() ||
-                        installed_it->second < dependency.minimum_version) {
-                        throw UpdateError(
-                            ErrorCode::DependencyFailed,
-                            "Unsatisfied dependency " +
-                            dependency.component + ">=" +
-                            dependency.minimum_version.str() +
-                            " for " + component);
-                    }
-
+                if (installed_it != installed_versions.end() &&
+                    installed_it->second >= dependency.minimum_version) {
                     continue;
+                }
+
+                if (dependency_update->available < dependency.minimum_version) {
+                    throw UpdateError(
+                        ErrorCode::DependencyFailed,
+                        "Unsatisfied dependency " +
+                        dependency.component + ">=" +
+                        dependency.minimum_version.str() +
+                        " for " + component);
                 }
 
                 self(self, dependency.component);
