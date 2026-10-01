@@ -27,13 +27,13 @@ jobs:
       - name: Install Windows dependencies
         if: runner.os == 'Windows'
         shell: pwsh
-        run: vcpkg install openssl:x64-windows
+        run: choco install openssl.light -y --no-progress
 
       - name: Configure
         shell: pwsh
         run: |
           if ($env:RUNNER_OS -eq "Windows") {
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64"
           } else {
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           }
