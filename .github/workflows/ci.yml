@@ -33,7 +33,7 @@ jobs:
         shell: pwsh
         run: |
           if ($env:RUNNER_OS -eq "Windows") {
-            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL-Win64"
+            cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR="C:/Program Files/OpenSSL"
           } else {
             cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           }
