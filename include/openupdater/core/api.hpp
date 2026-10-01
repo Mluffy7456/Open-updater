@@ -1,6 +1,7 @@
 #pragma once
 
 #include "openupdater/core/error.hpp"
+#include "openupdater/core/platform.hpp"
 #include "openupdater/core/version.hpp"
 
 #include <filesystem>
@@ -11,9 +12,9 @@
 namespace openupdater {
 
 inline constexpr int API_VERSION_MAJOR = 1;
-inline constexpr int API_VERSION_MINOR = 1;
+inline constexpr int API_VERSION_MINOR = 2;
 inline constexpr int API_VERSION_PATCH = 0;
-inline constexpr const char* API_VERSION = "1.1.0";
+inline constexpr const char* API_VERSION = "1.2.0";
 
 enum class UpdateState {
     UpToDate,
@@ -26,6 +27,31 @@ struct UpdateOptions {
     bool backup_existing = true;
     bool automatic_rollback = true;
     bool verify_download = true;
+    ApiHttpHeaders headers{};
+};
+
+
+struct UpdateTarget {
+    std::string component;
+    Version current;
+};
+
+struct AvailableUpdate {
+    std::string component;
+    Version current;
+    Version available;
+    std::string asset;
+    std::string platform;
+    std::string architecture;
+    std::string sha256;
+    std::string download_url;
+};
+
+struct UpdateDiscoveryRequest {
+    std::string repository;
+    std::vector<UpdateTarget> targets;
+    Platform platform = current_platform();
+    Architecture architecture = current_architecture();
     ApiHttpHeaders headers{};
 };
 
