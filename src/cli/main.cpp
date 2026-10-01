@@ -14,7 +14,8 @@ void print_usage() {
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
-        << "  openupdater install <package> <destination>\n";
+        << "  openupdater install <package> <destination>\n"
+        << "  openupdater download <url> <destination>\n";
 }
 
 } // namespace
@@ -63,6 +64,17 @@ int main(int argc, char* argv[]) {
             }
 
             std::cout << "Already up to date.\n";
+            return 0;
+        }
+
+        if (command == "download") {
+            if (argc != 4) {
+                print_usage();
+                return 1;
+            }
+
+            openupdater::Downloader::download(argv[2], argv[3]);
+            std::cout << "Download completed successfully.\\n";
             return 0;
         }
 
