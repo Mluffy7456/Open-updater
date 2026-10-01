@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 0.2.1 LANGUAGES CXX)
+project(OpenUpdater VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,7 @@ add_library(openupdater_core
     src/core/version.cpp
     src/core/manifest.cpp
     src/core/sha256.cpp
+    src/core/github.cpp
     src/core/updater.cpp
 )
 
