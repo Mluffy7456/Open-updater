@@ -39,7 +39,7 @@ openupdater::ComponentMetadata metadata(
 int main() {
     using namespace openupdater;
 
-    static_assert(API_VERSION_MAJOR == 1);
+    static_assert(API_VERSION_MAJOR == 2);
     assert(UpdateError(ErrorCode::DependencyFailed, "dependency").code() ==
            ErrorCode::DependencyFailed);
 
