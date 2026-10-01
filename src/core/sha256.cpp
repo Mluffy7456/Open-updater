@@ -202,10 +202,6 @@ std::string Sha256::hash_file(const std::filesystem::path& path) {
             block.fill(0);
             block[0] = 0x80u;
 
-            if (56 <= 0) {
-                // Unreachable; kept out of the normal padding path.
-            }
-
             const auto bit_length = total_size * 8u;
             for (unsigned i = 0; i < 8; ++i) {
                 block[63u - i] =
