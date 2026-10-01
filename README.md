@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v1.3.0 — Update selection
+v1.4.0 — Package signatures
 
 Features:
 - semantic numeric version comparison;
@@ -27,6 +27,7 @@ Features:
 - platform/architecture-aware GitHub release asset selection;
 - multi-component update discovery without installation;
 - core-level selection and selective installation of discovered updates;
+- optional Ed25519 package signature verification backed by OpenSSL;
 - asynchronous GUI operations;
 - local package installation;
 - command-line interface;
@@ -116,6 +117,29 @@ The request defaults to backup, automatic rollback, and digest verification when
 
 See `docs/API.md` for the stable API contract and compatibility notes.
 
+### Package signatures
+
+OpenUpdater 1.4 adds detached Ed25519 signatures on top of SHA-256 verification. The signed message is the raw 32-byte SHA-256 digest of the package.
+
+A GitHub release can publish:
+
+    Core-windows-x64.zip
+    Core-windows-x64.zip.sig
+
+The .sig asset contains 128 hexadecimal characters (64 signature bytes). The trusted Ed25519 public key is supplied by the application and is never taken from the update server.
+
+Signature verification is opt-in through UpdateOptions:
+
+    openupdater::UpdateOptions options;
+    options.verify_signature = true;
+    options.trusted_public_key = "<64 hexadecimal characters>";
+
+When enabled, OpenUpdater verifies the package signature before backup or installation. Missing signatures, missing trusted keys, malformed signatures, and invalid signatures are rejected.
+
+The CLI also provides:
+
+    openupdater verify-signature <package> <signature-hex> <public-key-hex>
+
 ### Update selection
 
 OpenUpdater 1.3 adds selection between discovery and installation. Selection is part of the core API, so GUI, CLI and other clients can use the same policy.
@@ -194,6 +218,7 @@ Example:
 - 1.1.0 — Multi-platform asset detection and selection
 - 1.2.0 — Update discovery
 - 1.3.0 — Update selection and selective installation
+- 1.4.0 — Ed25519 package signature verification
 - 1.4.0 — Digital package signatures
 - 2.0.0 — Full update manager
 
