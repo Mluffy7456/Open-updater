@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v0.4.0 — Backup and Rollback
+v0.5.0 — Silent Update
 
 Features:
 - semantic numeric version comparison;
@@ -16,6 +16,8 @@ Features:
 - staged package installation;
 - automatic backup of an existing installed package;
 - rollback of a previous installation;
+- unattended update flow from GitHub Releases;
+- silent CLI mode for automation/background execution;
 - local package installation;
 - command-line interface;
 - CMake build;
@@ -55,7 +57,7 @@ Install a local package:
 
     openupdater install ./DemoApp-1.4.0.zip ./updates
 
-If `./updates/DemoApp-1.4.0.zip` already exists, OpenUpdater creates a backup under `./updates/.openupdater/backups/` before activating the new package. Installation is staged first, so a failed activation attempts to restore the previous package automatically.
+If ./updates/DemoApp-1.4.0.zip already exists, OpenUpdater creates a backup under ./updates/.openupdater/backups/ before activating the new package. Installation is staged first, so a failed activation attempts to restore the previous package automatically.
 
 The install command prints the backup path when a previous package was replaced. Restore it with:
 
@@ -75,7 +77,23 @@ Download an asset from the latest public GitHub release:
 
 The provider queries GitHub's latest published release, selects the exact asset name, downloads its browser URL, and verifies the SHA-256 digest when GitHub provides one. An explicit digest can also be supplied as the fifth argument.
 
-The check command returns exit code 10 when an update is available and 0 when the current version is up to date. The verify command returns exit code 0 on a matching SHA-256 digest and 3 when verification fails.
+Run an unattended update from the latest GitHub release:
+
+    openupdater update 1.2.0 owner/repository DemoApp-1.4.0.zip ./updates
+
+For background/automation use, suppress normal status output:
+
+    openupdater update --silent 1.2.0 owner/repository DemoApp-1.4.0.zip ./updates
+
+The update command first checks the latest published release version. If it is newer than the current version, the asset is downloaded into OpenUpdater staging, verified, and installed through the v0.4.0 backup/rollback flow. If no update is needed, nothing is downloaded. The command is non-interactive and never asks for confirmation.
+
+Exit codes for update:
+- 0 — update installed;
+- 10 — no update required;
+- 1 — invalid CLI arguments;
+- 2 — update error.
+
+The latest-release endpoint used by the GitHub provider represents the most recent published non-prerelease, non-draft release.
 
 ## Manifest
 
