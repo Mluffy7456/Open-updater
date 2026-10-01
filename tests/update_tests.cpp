@@ -9,7 +9,7 @@ int main() {
     using namespace openupdater;
 
     static_assert(API_VERSION_MAJOR == 1);
-    static_assert(API_VERSION_MINOR == 1);
+    static_assert(API_VERSION_MINOR == 2);
     static_assert(API_VERSION_PATCH == 0);
 
     const UpdateRequest request{
@@ -25,6 +25,21 @@ int main() {
     assert(request.options.backup_existing);
     assert(request.options.automatic_rollback);
     assert(request.options.verify_download);
+    const UpdateDiscoveryRequest discovery_request{
+        "owner/repository",
+        {
+            {"Core", Version("1.0.0")},
+            {"GUI", Version("2.3.0")}
+        },
+        Platform::Windows,
+        Architecture::X64,
+        {}
+    };
+
+    assert(discovery_request.targets.size() == 2);
+    assert(discovery_request.targets[0].component == "Core");
+    assert(discovery_request.targets[1].current == Version("2.3.0"));
+
 
     const auto platform = current_platform();
     const auto architecture = current_architecture();
@@ -51,6 +66,36 @@ int main() {
     };
 
     assert(up_to_date.state == UpdateState::UpToDate);
+
+    bool discovery_caught = false;
+    try {
+        Updater::discover_updates(UpdateDiscoveryRequest{
+            "invalid",
+            {{"Core", Version("1.0.0")}},
+            Platform::Windows,
+            Architecture::X64,
+            {}
+        });
+    } catch (const UpdateError& error) {
+        discovery_caught = true;
+        assert(error.code() == ErrorCode::InvalidArgument);
+    }
+    assert(discovery_caught);
+
+    discovery_caught = false;
+    try {
+        Updater::discover_updates(UpdateDiscoveryRequest{
+            "owner/repository",
+            {{"Core", Version("not-a-version")}},
+            Platform::Windows,
+            Architecture::X64,
+            {}
+        });
+    } catch (const UpdateError& error) {
+        discovery_caught = true;
+        assert(error.code() == ErrorCode::InvalidVersion);
+    }
+    assert(discovery_caught);
 
     bool caught = false;
     try {
