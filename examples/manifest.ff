@@ -1,0 +1,4 @@
+# OpenUpdater manifest
+application=DemoApp
+version=1.4.0
+package=DemoApp-1.4.0.zip
