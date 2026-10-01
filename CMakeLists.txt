@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 0.5.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+option(OPENUPDATER_BUILD_GUI "Build the optional Qt 6 GUI" OFF)
 
 if(NOT WIN32)
     find_package(CURL REQUIRED)
@@ -34,6 +36,17 @@ endif()
 
 add_executable(openupdater src/cli/main.cpp)
 target_link_libraries(openupdater PRIVATE openupdater_core)
+
+if(OPENUPDATER_BUILD_GUI)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets Concurrent)
+
+    add_executable(openupdater_gui src/gui/main.cpp)
+    target_link_libraries(openupdater_gui PRIVATE
+        openupdater_core
+        Qt6::Widgets
+        Qt6::Concurrent
+    )
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
