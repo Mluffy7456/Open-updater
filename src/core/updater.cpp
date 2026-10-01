@@ -20,6 +20,8 @@
 #include <windows.h>
 #include <winhttp.h>
 #pragma comment(lib, "winhttp.lib")
+
+#include <sstream>
 #else
 #include <curl/curl.h>
 #endif
@@ -30,6 +32,13 @@ namespace openupdater {
 
 namespace {
 
+std::string winhttp_error(const char* operation) {
+    const auto code = GetLastError();
+    std::ostringstream message;
+    message << operation << " (WinHTTP error " << code << ")";
+    return message.str();
+}
+
 std::wstring widen(const std::string& value) {
     if (value.empty()) return {};
 
@@ -38,7 +47,7 @@ std::wstring widen(const std::string& value) {
         nullptr, 0);
 
     if (size <= 0)
-        throw std::runtime_error("Failed to convert URL to UTF-16.");
+        throw std::runtime_error(winhttp_error("Failed to convert URL to UTF-16."));
 
     std::wstring result(static_cast<std::size_t>(size), L'\0');
 
@@ -73,7 +82,7 @@ void download_windows(
             static_cast<DWORD>(wide_url.size()),
             0,
             &components)) {
-        throw std::runtime_error("Invalid HTTP(S) URL.");
+        throw std::runtime_error(winhttp_error("Invalid HTTP(S) URL."));
     }
 
     HINTERNET session = WinHttpOpen(
@@ -84,7 +93,7 @@ void download_windows(
         0);
 
     if (!session)
-        throw std::runtime_error("Failed to initialize WinHTTP.");
+        throw std::runtime_error(winhttp_error("Failed to initialize WinHTTP."));
 
     const auto close_session = [&]() { WinHttpCloseHandle(session); };
 
@@ -96,7 +105,7 @@ void download_windows(
 
     if (!connection) {
         close_session();
-        throw std::runtime_error("Failed to connect to update server.");
+        throw std::runtime_error(winhttp_error("Failed to connect to update server."));
     }
 
     const auto close_connection = [&]() {
@@ -120,7 +129,7 @@ void download_windows(
 
     if (!request) {
         close_connection();
-        throw std::runtime_error("Failed to create HTTP request.");
+        throw std::runtime_error(winhttp_error("Failed to create HTTP request."));
     }
 
     std::wstring additional_headers;
@@ -146,7 +155,7 @@ void download_windows(
         !WinHttpReceiveResponse(request, nullptr)) {
         WinHttpCloseHandle(request);
         close_connection();
-        throw std::runtime_error("HTTP request failed.");
+        throw std::runtime_error(winhttp_error("HTTP request failed."));
     }
 
     DWORD status_code = 0;
@@ -162,7 +171,7 @@ void download_windows(
         status_code < 200 || status_code >= 300) {
         WinHttpCloseHandle(request);
         close_connection();
-        throw std::runtime_error("HTTP server returned a non-success status.");
+        throw std::runtime_error("HTTP server returned status " + std::to_string(status_code) + ".");
     }
 
     std::ofstream output(destination, std::ios::binary);
@@ -181,7 +190,7 @@ void download_windows(
         if (!WinHttpQueryDataAvailable(request, &available)) {
             WinHttpCloseHandle(request);
             close_connection();
-            throw std::runtime_error("Failed to read HTTP response.");
+            throw std::runtime_error(winhttp_error("Failed to read HTTP response."));
         }
 
         if (available == 0)
@@ -193,7 +202,7 @@ void download_windows(
         if (!WinHttpReadData(request, chunk.data(), available, &read)) {
             WinHttpCloseHandle(request);
             close_connection();
-            throw std::runtime_error("Failed to download response.");
+            throw std::runtime_error(winhttp_error("Failed to download response."));
         }
 
         output.write(chunk.data(), static_cast<std::streamsize>(read));
