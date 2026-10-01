@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0] - 2026-10-01
+
+### Added
+- GitHub Releases provider for public repositories.
+- Latest published release discovery through the GitHub REST API.
+- Exact release asset selection by filename.
+- Automatic use of GitHub-provided SHA-256 asset digests when available.
+- CLI `github` command for end-to-end release asset downloads.
+- GitHub API request headers with an explicit API version and User-Agent.
+
 ## [0.2.1] - 2026-10-01
 
 ### Added
