@@ -1,138 +1,156 @@
-# OpenUpdater 1.4 API
+# OpenUpdater 2.0 API
 
-OpenUpdater 1.0 exposes a stable C++20 core API. The GUI and CLI are clients of the same core library.
+OpenUpdater 2.0 keeps the C++20 core, CLI and optional Qt 6 GUI while adding a dependency-aware update manager and atomic multi-component transactions.
 
 ## Version
 
-Use the compile-time API version constants:
+Use:
 
     openupdater::API_VERSION_MAJOR
     openupdater::API_VERSION_MINOR
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-The 1.4 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+Version 2.0 is a major API release. Existing 1.x entry points remain available, but new integrations should use the manager APIs for multi-component updates.
 
-## Platform and architecture
-
-The core exposes `Platform` and `Architecture` enums plus `current_platform()` and `current_architecture()` for runtime host detection.
-
-`platform_name()` and `architecture_name()` return stable lowercase identifiers such as `windows`, `linux`, `macos`, `x64` and `arm64`.
-
-`GitHubReleasesProvider::latest_compatible(...)` selects an asset using the convention `<component>-<platform>-<architecture>.<extension>`. It rejects unknown host information and ambiguous multiple matches rather than silently selecting an arbitrary package.
-
-## Update discovery
+## Discovery
 
 The high-level discovery entry point is:
 
     openupdater::Updater::discover_updates(
         const openupdater::UpdateDiscoveryRequest&)
 
-UpdateDiscoveryRequest contains:
+Discovery checks multiple components without downloading or installing packages. AvailableUpdate contains the component, current/available versions, compatible asset, platform, architecture, SHA-256 digest when available, optional detached signature URL, and download URL.
 
-- repository — GitHub owner/repository;
-- targets — components and their installed versions;
-- platform — target platform, defaulting to the current host;
-- architecture — target CPU architecture, defaulting to the current host;
-- headers — optional HTTP headers.
+## Selection
 
-For every target, discovery looks for a compatible asset in the latest published GitHub release. It returns only targets whose release version is newer than the supplied current version. A missing compatible asset is omitted from the result.
+Selection remains separate from discovery:
 
-AvailableUpdate contains:
+    openupdater::UpdateSelection selection;
+    selection.select("Core");
+    selection.select("GUI");
 
-- component;
-- current;
-- available;
-- asset;
-- platform;
-- architecture;
-- sha256;
-- download_url.
+Only selected components are direct roots of the update plan. Dependencies can add additional update components automatically.
 
-Discovery performs only metadata retrieval. It does not download packages, create backups, or install anything. The returned vector is intended for a later selection/installation stage.
+## Component manifest
+
+Manifest now supports optional component sections while preserving the original three-key format.
+
+Example:
+
+    application=DemoApp
+    version=2.0.0
+    package=DemoApp-2.0.0.zip
+
+    [component:Runtime]
+    version=2.1.0
+    dependencies=
+
+    [component:Core]
+    version=2.0.0
+    dependencies=Runtime>=2.0.0
+
+    [component:GUI]
+    version=2.0.0
+    dependencies=Core>=2.0.0,Runtime>=2.0.0
+
+A component dependency has the form component>=minimum-version. Component metadata describes the target package version and its required minimum dependency versions.
+
+## Update planning
+
+The v2.0 planning API is:
+
+    openupdater::UpdateManagerRequest request{
+        discovered_updates,
+        selection,
+        manifest.components,
+        installed_components,
+        "./updates"
+    };
+
+    const auto plan =
+        openupdater::Updater::build_plan(request);
+
+UpdateManagerRequest contains:
+
+- updates — discovered update candidates;
+- selection — explicitly selected components;
+- metadata — target component versions and dependency requirements;
+- installed — currently installed component versions;
+- destination — installation directory;
+- options — verification, backup, rollback and HTTP-header policy.
+
+build_plan() performs preflight validation without downloading or installing anything.
+
+The planner:
+
+1. validates component and version metadata;
+2. rejects duplicate components;
+3. rejects missing metadata;
+4. detects dependency cycles;
+5. checks minimum dependency versions;
+6. automatically includes available updates required by selected components;
+7. produces a topological installation order with dependencies before dependents;
+8. rejects ambiguous installation targets.
+
+If a required dependency is already installed at or above its minimum version, its update is not required. If no suitable installed or available version exists, ErrorCode::DependencyFailed is thrown.
+
+## Atomic transaction
+
+Execute a validated plan with:
+
+    const auto report =
+        openupdater::Updater::apply_plan(request);
+
+apply_plan() has two phases.
+
+### Phase 1 — complete preflight
+
+Every package is downloaded into .openupdater/staging.
+
+For every package, OpenUpdater performs:
+
+1. download;
+2. SHA-256 verification when enabled and a digest is available;
+3. Ed25519 signature verification when enabled.
+
+No installation or backup occurs during this phase. If any package fails, all staged files are removed and the destination is left untouched.
+
+### Phase 2 — activation
+
+Packages are installed in dependency order. Each replacement is staged and backed up using the existing BackupManager.
+
+If activation of a later component fails, previously activated components are rolled back in reverse order. A component that had no pre-existing file is removed during transaction rollback.
+
+Transactional execution requires:
+
+- UpdateOptions::backup_existing == true;
+- UpdateOptions::automatic_rollback == true.
+
+This requirement prevents the manager from silently creating a partially updated, non-rollbackable state.
+
+UpdateTransactionReport contains the per-component UpdateReport values and the final installation order.
 
 ## Package signatures
 
-OpenUpdater 1.4 supports detached Ed25519 signatures over the raw 32-byte SHA-256 digest of an update package.
+OpenUpdater 2.0 retains the v1.4 detached Ed25519 mechanism.
 
-GitHub asset discovery recognizes a sibling signature asset named:
+A GitHub release can publish:
 
-    <asset-name>.sig
+    Core-windows-x64.zip
+    Core-windows-x64.zip.sig
 
-AvailableUpdate.signature_url contains the URL of that signature asset when present.
+The signature is verified over the raw 32-byte SHA-256 digest of the package. The trusted public key is supplied by the application and is never downloaded from GitHub.
 
-SignatureVerifier::verify_ed25519_sha256 verifies a 64-byte Ed25519 signature represented as 128 hexadecimal characters using a 32-byte trusted public key represented as 64 hexadecimal characters.
+Enable verification with:
 
-UpdateOptions adds:
+    openupdater::UpdateOptions options;
+    options.verify_signature = true;
+    options.trusted_public_key = "<64 hexadecimal characters>";
 
-- verify_signature — enables signature verification;
-- trusted_public_key — trusted Ed25519 public key supplied by the application.
+## Error model
 
-Signature verification is performed after download and SHA-256 verification, but before backup and installation. The public key is never downloaded from GitHub.
-
-## Update selection
-
-Selection is deliberately separate from discovery. The core provides:
-
-    openupdater::UpdateSelection
-
-It supports:
-
-- select(component);
-- deselect(component);
-- clear();
-- select_all(updates);
-- selected(component);
-- empty().
-
-Selective installation is performed with:
-
-    openupdater::Updater::update_selected(
-        const openupdater::SelectedUpdateRequest&)
-
-The request contains the discovery results, the selected components, an installation destination, and UpdateOptions.
-
-Only components present in the discovery results may be selected. An empty selection is rejected. The selected packages are downloaded, verified, staged and installed using the existing backup/rollback policy.
-
-## Update request
-
-The high-level entry point is:
-
-    openupdater::Updater::update(const openupdater::UpdateRequest&)
-
-A request contains:
-
-- current — installed application version;
-- repository — GitHub owner/repository;
-- asset_name — exact release asset filename;
-- destination — installation directory;
-- expected_sha256 — optional caller-supplied digest;
-- options — backup, rollback and verification policy.
-
-UpdateOptions defaults to the conservative behavior:
-
-- create a backup when an existing package is replaced;
-- attempt automatic rollback when activation fails;
-- verify a package when a digest is available;
-- use no additional HTTP headers.
-
-## Result
-
-UpdateReport contains:
-
-- current — version supplied by the caller;
-- available — latest GitHub release version;
-- state — UpToDate or UpdateAvailable;
-- package — installed package path when an update was installed;
-- backup — backup path when an existing package was replaced.
-
-When state == UpdateState::UpToDate, no package is downloaded.
-
-## Errors
-
-The stable API throws openupdater::UpdateError.
-
-Inspect error.code() and handle:
+UpdateError::code() can report:
 
 - InvalidArgument
 - InvalidVersion
@@ -141,12 +159,14 @@ Inspect error.code() and handle:
 - VerificationFailed
 - InstallationFailed
 - RollbackFailed
+- DependencyFailed
+- TransactionFailed
 
-The legacy lower-level functions remain available for applications that need direct control over individual operations.
+DependencyFailed means that dependency metadata is invalid, missing, cyclic, or unsatisfied. TransactionFailed means a transaction-level operation failed without a more specific verification or rollback error.
 
-## Compatibility
+## Legacy APIs
 
-The following existing APIs remain available in 1.x:
+Existing lower-level APIs remain available:
 
 - Version
 - Manifest and load_manifest
@@ -156,7 +176,12 @@ The following existing APIs remain available in 1.x:
 - Updater::check
 - Updater::install
 - Updater::update_from_github
+- Updater::update
+- Updater::update_selected
 
-The high-level Updater::update should be preferred for direct single-package updates. For workflows that inspect multiple components before installing, use Updater::discover_updates followed by UpdateSelection and Updater::update_selected.
+For new multi-component workflows, use:
 
-The exact-asset GitHub API remains available for applications that need explicit asset selection.
+    discover_updates()
+        -> UpdateSelection
+        -> build_plan()
+        -> apply_plan()
