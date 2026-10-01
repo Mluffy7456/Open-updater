@@ -12,28 +12,39 @@
 #include <QLineEdit>
 #include <QMainWindow>
 #include <QProgressBar>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QTimer>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 
 #include <filesystem>
+#include <optional>
 #include <stdexcept>
 
 namespace {
 
 constexpr auto kVersion = openupdater::API_VERSION;
+constexpr auto kRepository = "Mluffy7456/Open-updater";
+constexpr auto kComponent = "OpenUpdater";
+
+struct CheckResult {
+    openupdater::Version current;
+    openupdater::GitHubRelease release;
+};
 
 class MainWindow final : public QMainWindow {
 public:
     MainWindow() {
         setWindowTitle(QString("OpenUpdater %1").arg(kVersion));
         setWindowIcon(QIcon(":/icons/openupdater.svg"));
-        resize(820, 620);
-        setMinimumSize(700, 520);
+        resize(760, 520);
+        setMinimumSize(680, 470);
 
         auto* central = new QWidget(this);
         auto* root = new QVBoxLayout(central);
-        root->setContentsMargins(28, 24, 28, 24);
+        root->setContentsMargins(32, 28, 32, 28);
         root->setSpacing(16);
 
         auto* title = new QLabel("OpenUpdater", central);
@@ -41,36 +52,28 @@ public:
         auto* subtitle = new QLabel(
             QString("Secure application updates · v%1").arg(kVersion), central);
         subtitle->setObjectName("subtitle");
-
         root->addWidget(title);
         root->addWidget(subtitle);
 
-        auto* source_box = new QGroupBox("Update source", central);
-        auto* form = new QFormLayout(source_box);
-        form->setContentsMargins(18, 18, 18, 18);
-        form->setHorizontalSpacing(18);
-        form->setVerticalSpacing(12);
+        auto* app_box = new QGroupBox("Application", central);
+        auto* app_layout = new QVBoxLayout(app_box);
+        app_layout->setContentsMargins(18, 18, 18, 18);
 
-        current_ = new QLineEdit("1.0.0", source_box);
-        repository_ = new QLineEdit("owner/repository", source_box);
-        asset_ = new QLineEdit("DemoApp-windows-x64.zip", source_box);
-        destination_ = new QLineEdit("./updates", source_box);
-        digest_ = new QLineEdit(source_box);
-        digest_->setPlaceholderText("Optional SHA-256 digest");
-
-        form->addRow("Current version", current_);
-        form->addRow("GitHub repository", repository_);
-        form->addRow("Release asset", asset_);
-        form->addRow("Install destination", destination_);
-        form->addRow("SHA-256", digest_);
-
-        root->addWidget(source_box);
+        version_ = new QLabel(QString("Current version  %1").arg(kVersion), app_box);
+        version_->setObjectName("version");
+        source_ = new QLabel(
+            QString("Update source  ·  GitHub / %1").arg(kRepository), app_box);
+        source_->setObjectName("source");
+        app_layout->addWidget(version_);
+        app_layout->addWidget(source_);
+        root->addWidget(app_box);
 
         auto* actions = new QHBoxLayout();
         actions->setSpacing(10);
-        check_button_ = new QPushButton("Check for update", central);
+        check_button_ = new QPushButton("Check for updates", central);
         update_button_ = new QPushButton("Install update", central);
         update_button_->setObjectName("primary");
+        update_button_->setEnabled(false);
         actions->addWidget(check_button_);
         actions->addWidget(update_button_);
         root->addLayout(actions);
@@ -79,13 +82,13 @@ public:
         auto* status_layout = new QVBoxLayout(status_box);
         status_layout->setContentsMargins(18, 18, 18, 18);
 
-        status_ = new QLabel("Ready. Configure the source and check for an update.", status_box);
+        status_ = new QLabel(
+            "Ready. Check GitHub for the latest version.", status_box);
         status_->setWordWrap(true);
-        status_->setMinimumHeight(54);
+        status_->setMinimumHeight(64);
 
         progress_ = new QProgressBar(status_box);
-        progress_->setRange(0, 100);
-        progress_->setValue(0);
+        progress_->setRange(0, 0);
         progress_->setTextVisible(false);
         progress_->setVisible(false);
 
@@ -93,101 +96,140 @@ public:
         status_layout->addWidget(progress_);
         root->addWidget(status_box);
         root->addStretch();
-
         setCentralWidget(central);
 
         connect(check_button_, &QPushButton::clicked, this, [this] {
-            run_async("Checking the latest GitHub release...", [this] {
-                const auto current = parse_current_version();
-                const auto release = openupdater::GitHubReleasesProvider::latest(
-                    repository_->text().toStdString(),
-                    asset_->text().toStdString());
-
-                if (release.version > current) {
-                    return QString("Update available: %1 → %2")
-                        .arg(QString::fromStdString(current.str()))
-                        .arg(QString::fromStdString(release.version.str()));
-                }
-
-                return QString("Already up to date: %1")
-                    .arg(QString::fromStdString(current.str()));
-            });
+            check_for_update();
         });
-
         connect(update_button_, &QPushButton::clicked, this, [this] {
-            run_async("Downloading and installing the update...", [this] {
-                const auto current = parse_current_version();
-                const auto result = openupdater::Updater::update_from_github(
-                    current,
-                    repository_->text().toStdString(),
-                    asset_->text().toStdString(),
-                    std::filesystem::path(destination_->text().toStdString()),
-                    digest_->text().toStdString());
-
-                if (result.state == openupdater::UpdateState::UpToDate) {
-                    return QString("No update required. Current version: %1")
-                        .arg(QString::fromStdString(result.available.str()));
-                }
-
-                QString message = QString("Updated successfully: %1 → %2")
-                    .arg(QString::fromStdString(result.current.str()))
-                    .arg(QString::fromStdString(result.available.str()));
-
-                if (!result.backup.empty()) {
-                    message += QString("\nBackup: %1")
-                        .arg(QString::fromStdString(result.backup.string()));
-                }
-
-                return message;
-            });
+            install_update();
         });
     }
 
 private:
-    [[nodiscard]] openupdater::Version parse_current_version() const {
-        const auto current = openupdater::Version(current_->text().trimmed().toStdString());
-        if (!current.valid())
-            throw std::runtime_error("Invalid current version.");
-        return current;
-    }
-
-    template <typename Function>
-    void run_async(const QString& message, Function function) {
+    void check_for_update() {
+        available_release_.reset();
         check_button_->setEnabled(false);
         update_button_->setEnabled(false);
         progress_->setVisible(true);
-        progress_->setRange(0, 0);
-        status_->setText(message);
+        status_->setText("Checking GitHub for the latest release...");
 
-        auto* watcher = new QFutureWatcher<QString>(this);
-        connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher] {
-            progress_->setRange(0, 100);
-            progress_->setValue(100);
-            progress_->setVisible(false);
-            status_->setText(watcher->result());
-            check_button_->setEnabled(true);
-            update_button_->setEnabled(true);
+        auto* watcher = new QFutureWatcher<CheckResult>(this);
+        connect(watcher, &QFutureWatcher<CheckResult>::finished,
+                this, [this, watcher] {
+            try {
+                const auto result = watcher->result();
+                progress_->setVisible(false);
+                check_button_->setEnabled(true);
+
+                if (result.release.version > result.current) {
+                    available_release_ = result.release;
+                    status_->setText(
+                        QString("Update available\n%1  →  %2\n%3")
+                            .arg(QString::fromStdString(result.current.str()))
+                            .arg(QString::fromStdString(result.release.version.str()))
+                            .arg(QString::fromStdString(result.release.asset)));
+                    update_button_->setEnabled(true);
+                } else {
+                    status_->setText(
+                        QString("You're up to date.\nCurrent version: %1")
+                            .arg(QString::fromStdString(result.current.str())));
+                }
+            } catch (const std::exception& error) {
+                progress_->setVisible(false);
+                check_button_->setEnabled(true);
+                status_->setText(
+                    QString("Error: %1").arg(QString::fromStdString(error.what())));
+            }
             watcher->deleteLater();
         });
 
-        watcher->setFuture(QtConcurrent::run([function]() {
-            try {
-                return function();
-            } catch (const std::exception& error) {
-                return QString("Error: %1").arg(QString::fromStdString(error.what()));
-            }
+        watcher->setFuture(QtConcurrent::run([] {
+            const openupdater::Version current(kVersion);
+            if (!current.valid())
+                throw std::runtime_error("Application version is invalid.");
+
+            const auto release =
+                openupdater::GitHubReleasesProvider::latest_compatible(
+                    kRepository, kComponent);
+
+            return CheckResult{current, release};
         }));
     }
 
-    QLineEdit* current_{};
-    QLineEdit* repository_{};
-    QLineEdit* asset_{};
-    QLineEdit* destination_{};
-    QLineEdit* digest_{};
+    void install_update() {
+        if (!available_release_)
+            return;
+
+        const auto release = *available_release_;
+        const auto answer = QMessageBox::question(
+            this,
+            "Install update",
+            QString("Download and install OpenUpdater %1?\n\nAsset: %2")
+                .arg(QString::fromStdString(release.version.str()))
+                .arg(QString::fromStdString(release.asset)),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes);
+
+        if (answer != QMessageBox::Yes)
+            return;
+
+        check_button_->setEnabled(false);
+        update_button_->setEnabled(false);
+        progress_->setVisible(true);
+        status_->setText("Downloading and verifying the update...");
+
+        auto* watcher = new QFutureWatcher<QString>(this);
+        connect(watcher, &QFutureWatcher<QString>::finished,
+                this, [this, watcher] {
+            try {
+                status_->setText(watcher->result());
+                progress_->setVisible(false);
+                QTimer::singleShot(700, qApp, &QApplication::quit);
+            } catch (const std::exception& error) {
+                progress_->setVisible(false);
+                check_button_->setEnabled(true);
+                status_->setText(
+                    QString("Error: %1").arg(QString::fromStdString(error.what())));
+            }
+            watcher->deleteLater();
+        });
+
+        watcher->setFuture(QtConcurrent::run([release] {
+            const auto temp_dir =
+                std::filesystem::path(
+                    QStandardPaths::writableLocation(
+                        QStandardPaths::TempLocation).toStdString()) /
+                "OpenUpdater";
+            std::filesystem::create_directories(temp_dir);
+
+            const auto installer = temp_dir / release.asset;
+            openupdater::Downloader::download(release.download_url, installer);
+
+            if (!release.sha256.empty() &&
+                !openupdater::verify_sha256(installer, release.sha256)) {
+                std::error_code error;
+                std::filesystem::remove(installer, error);
+                throw std::runtime_error(
+                    "SHA-256 verification failed for the downloaded installer.");
+            }
+
+            if (!QProcess::startDetached(
+                    QString::fromStdString(installer.string()), {})) {
+                throw std::runtime_error("Failed to start the downloaded installer.");
+            }
+
+            return QString("Update downloaded and installer started. OpenUpdater will close.");
+        }));
+    }
+
+    QLabel* version_{};
+    QLabel* source_{};
     QPushButton* check_button_{};
     QPushButton* update_button_{};
     QLabel* status_{};
     QProgressBar* progress_{};
+    std::optional<openupdater::GitHubRelease> available_release_;
 };
 
 } // namespace
