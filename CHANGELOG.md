@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.1.0] - 2026-10-01
+
+### Added
+- Windows Qt 6 desktop application as the primary graphical client.
+- Dark, minimal OpenUpdater interface with asynchronous update operations.
+- Vector SVG application icon embedded directly into the Qt GUI.
+- Windows installer and portable package now include the GUI, CLI and required Qt runtime.
+- Windows package CI now launches the installed GUI and verifies its runtime dependencies.
+- Desktop and Start Menu shortcuts created by the NSIS installer.
+
+### Changed
+- CLI executable is packaged as `openupdater-cli.exe` while `openupdater.exe` is the desktop GUI.
+- Public API and project version updated to 2.1.0.
+
 ## [2.0.0] - 2026-10-01
 
 ### Added
