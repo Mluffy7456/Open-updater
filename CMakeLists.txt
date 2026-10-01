@@ -70,4 +70,8 @@ if(BUILD_TESTING)
     add_executable(openupdater_update_tests tests/update_tests.cpp)
     target_link_libraries(openupdater_update_tests PRIVATE openupdater_core)
     add_test(NAME openupdater_update_tests COMMAND openupdater_update_tests)
+
+    add_executable(openupdater_signature_tests tests/signature_tests.cpp)
+    target_link_libraries(openupdater_signature_tests PRIVATE openupdater_core)
+    add_test(NAME openupdater_signature_tests COMMAND openupdater_signature_tests)
 endif()
