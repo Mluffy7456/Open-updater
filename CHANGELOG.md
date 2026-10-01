@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1] - 2026-10-01
+
+### Added
+- Portable SHA-256 file hashing without external cryptography dependencies.
+- SHA-256 known-answer tests for empty and non-empty files.
+- Package verification before installation.
+- CLI `verify` command.
+- Optional SHA-256 verification for the `install` command.
+
 ## [0.2.0] - 2026-10-01
 
 ### Added
