@@ -844,6 +844,7 @@ UpdateReport Updater::update(const UpdateRequest& request) {
 
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
+        std::filesystem::remove(signature_path, cleanup_error);
 
         return {
             request.current,
@@ -855,10 +856,12 @@ UpdateReport Updater::update(const UpdateRequest& request) {
     } catch (const UpdateError&) {
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
+        std::filesystem::remove(signature_path, cleanup_error);
         throw;
     } catch (const std::exception& error) {
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
+        std::filesystem::remove(signature_path, cleanup_error);
         throw UpdateError(
             ErrorCode::InstallationFailed,
             error.what());
