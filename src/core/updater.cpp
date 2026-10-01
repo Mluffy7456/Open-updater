@@ -345,7 +345,8 @@ std::filesystem::path install_package(
             try {
                 BackupManager::rollback(backup.backup, target);
             } catch (const std::exception& rollback_error) {
-                throw std::runtime_error(
+                throw UpdateError(
+                    ErrorCode::RollbackFailed,
                     "Installation failed and automatic rollback failed: " +
                     std::string(rollback_error.what()));
             }
@@ -483,23 +484,33 @@ UpdateReport Updater::update(const UpdateRequest& request) {
         ? release.sha256
         : request.expected_sha256;
 
-    try {
-        HttpHeaders headers(
-            request.options.headers.begin(),
-            request.options.headers.end());
+    HttpHeaders headers(
+        request.options.headers.begin(),
+        request.options.headers.end());
 
+    try {
         Downloader::download(
             release.download_url,
             package_path,
             headers);
+    } catch (const std::exception& error) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+        throw UpdateError(
+            ErrorCode::DownloadFailed,
+            error.what());
+    }
 
-        if (request.options.verify_download && !digest.empty() &&
-            !verify_sha256(package_path, digest)) {
-            throw UpdateError(
-                ErrorCode::VerificationFailed,
-                "Downloaded GitHub asset SHA-256 verification failed.");
-        }
+    if (request.options.verify_download && !digest.empty() &&
+        !verify_sha256(package_path, digest)) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+        throw UpdateError(
+            ErrorCode::VerificationFailed,
+            "Downloaded GitHub asset SHA-256 verification failed.");
+    }
 
+    try {
         const auto install_digest =
             request.options.verify_download ? digest : std::string{};
 
