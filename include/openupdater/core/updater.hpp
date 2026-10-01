@@ -5,6 +5,8 @@
 
 #include <filesystem>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace openupdater {
 
@@ -19,11 +21,14 @@ struct UpdateCheck {
     UpdateState state;
 };
 
+using HttpHeaders = std::vector<std::pair<std::string, std::string>>;
+
 class Downloader {
 public:
     static void download(
         const std::string& url,
-        const std::filesystem::path& destination);
+        const std::filesystem::path& destination,
+        const HttpHeaders& headers = {});
 };
 
 class Updater {
