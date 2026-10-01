@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0] - 2026-10-01
+
+### Added
+- Cross-platform HTTP/HTTPS downloader.
+- Native Windows WinHTTP implementation.
+- Linux libcurl implementation.
+- CLI download command.
+- Automatic creation of the download destination parent directory.
+
 ## [0.1.0] - 2026-10-01
 
 ### Added
@@ -14,5 +23,4 @@
 - Core unit tests.
 
 ### Notes
-- Network downloading is intentionally deferred to v0.2.0.
-- Package hash/signature verification is intentionally deferred to v0.2.1.
+- Package hash/signature verification is planned for v0.2.1.
