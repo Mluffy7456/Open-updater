@@ -1,6 +1,9 @@
 #include "openupdater/core/updater.hpp"
 
+#include "openupdater/core/backup.hpp"
+
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -68,7 +71,7 @@ void download_windows(
     }
 
     HINTERNET session = WinHttpOpen(
-        L"OpenUpdater/0.2.0",
+        L"OpenUpdater/0.4.0",
         WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
         WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS,
@@ -272,7 +275,7 @@ UpdateCheck Updater::check(const Version& current, const Manifest& manifest) {
     return {current, manifest.version, UpdateState::UpToDate};
 }
 
-void Updater::install(
+std::filesystem::path Updater::install(
     const std::filesystem::path& package,
     const std::filesystem::path& destination,
     const std::string& expected_sha256) {
@@ -286,16 +289,64 @@ void Updater::install(
     std::filesystem::create_directories(destination);
 
     const auto target = destination / package.filename();
-    std::error_code ec;
+    const auto state_directory = destination / ".openupdater";
+    const auto staging_directory = state_directory / "staging";
+    const auto backup_directory = state_directory / "backups";
 
+    std::filesystem::create_directories(staging_directory);
+
+    const auto stamp =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const auto staging =
+        staging_directory /
+        (package.filename().string() + "." + std::to_string(stamp) + ".tmp");
+
+    std::error_code error;
     std::filesystem::copy_file(
         package,
-        target,
-        std::filesystem::copy_options::overwrite_existing,
-        ec);
+        staging,
+        std::filesystem::copy_options::none,
+        error);
 
-    if (ec)
-        throw std::runtime_error("Failed to install package: " + ec.message());
+    if (error)
+        throw std::runtime_error(
+            "Failed to stage package: " + error.message());
+
+    BackupInfo backup;
+    bool has_backup = false;
+
+    try {
+        if (std::filesystem::exists(target)) {
+            backup = BackupManager::create(target, backup_directory);
+            has_backup = true;
+        }
+
+        std::filesystem::remove(target, error);
+        if (error)
+            throw std::runtime_error(
+                "Failed to prepare installation target: " + error.message());
+
+        std::filesystem::rename(staging, target, error);
+        if (error)
+            throw std::runtime_error(
+                "Failed to activate staged package: " + error.message());
+
+        return has_backup ? backup.backup : std::filesystem::path{};
+    } catch (...) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(staging, cleanup_error);
+
+        if (has_backup) {
+            try {
+                BackupManager::rollback(backup.backup, target);
+            } catch (const std::exception& rollback_error) {
+                throw std::runtime_error(
+                    "Installation failed and automatic rollback failed: " +
+                    std::string(rollback_error.what()));
+            }
+        }
+
+        throw;
+    }
 }
-
 } // namespace openupdater
