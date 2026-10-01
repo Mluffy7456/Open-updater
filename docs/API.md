@@ -135,7 +135,7 @@ UpdateTransactionReport contains the per-component UpdateReport values and the f
 
 ## Package signatures
 
-OpenUpdater 2.0 retains the v1.4 detached Ed25519 mechanism.
+OpenUpdater 2.1 retains the v1.4 detached Ed25519 mechanism.
 
 A GitHub release can publish:
 
