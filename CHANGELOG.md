@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0] - 2026-10-01
+
+### Added
+- Runtime platform detection for Windows, Linux and macOS.
+- Runtime architecture detection for x64, x86, ARM64 and ARM32.
+- Platform and architecture naming helpers.
+- Platform-aware GitHub release asset matching.
+- `GitHubReleasesProvider::latest_compatible(...)` for automatic compatible asset selection.
+- Unit coverage for platform detection and asset matching.
+
+### Changed
+- Project and public API version updated to 1.1.0.
+- GitHub provider User-Agent updated to OpenUpdater/1.1.
+
+
 ## [1.0.0] - 2026-10-01
 
 ### Added
