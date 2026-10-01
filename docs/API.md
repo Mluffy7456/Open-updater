@@ -1,6 +1,6 @@
-# OpenUpdater 2.0 API
+# OpenUpdater 2.1 API
 
-OpenUpdater 2.0 keeps the C++20 core, CLI and optional Qt 6 GUI while adding a dependency-aware update manager and atomic multi-component transactions.
+OpenUpdater 2.1 keeps the C++20 core and dependency-aware update manager while adding a packaged Qt 6 desktop application for Windows.
 
 ## Version
 
@@ -11,9 +11,11 @@ Use:
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-Version 2.0 is a major API release. Existing 1.x entry points remain available, but new integrations should use the manager APIs for multi-component updates.
+Version 2.1 is a minor API release focused on the desktop client and Windows distribution. Existing 1.x entry points remain available, but new integrations should use the manager APIs for multi-component updates.
 
-## Discovery
+## Desktop GUI
+
+The Windows desktop application uses the same updater core as the CLI. It performs GitHub release checks and asynchronous installations without blocking the UI. The application icon is a vector SVG embedded through Qt resources and the Windows package deploys the required Qt runtime with `windeployqt`.\n\n## Discovery
 
 The high-level discovery entry point is:
 
