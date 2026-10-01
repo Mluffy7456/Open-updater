@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="openupdater.svg">../../assets/openupdater.svg</file>
+    </qresource>
+</RCC>
