@@ -1,4 +1,4 @@
-# OpenUpdater 1.2 API
+# OpenUpdater 1.3 API
 
 OpenUpdater 1.0 exposes a stable C++20 core API. The GUI and CLI are clients of the same core library.
 
@@ -11,7 +11,7 @@ Use the compile-time API version constants:
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-The 1.2 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+The 1.3 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
 
 ## Platform and architecture
 
@@ -50,6 +50,30 @@ AvailableUpdate contains:
 - download_url.
 
 Discovery performs only metadata retrieval. It does not download packages, create backups, or install anything. The returned vector is intended for a later selection/installation stage.
+
+## Update selection
+
+Selection is deliberately separate from discovery. The core provides:
+
+    openupdater::UpdateSelection
+
+It supports:
+
+- select(component);
+- deselect(component);
+- clear();
+- select_all(updates);
+- selected(component);
+- empty().
+
+Selective installation is performed with:
+
+    openupdater::Updater::update_selected(
+        const openupdater::SelectedUpdateRequest&)
+
+The request contains the discovery results, the selected components, an installation destination, and UpdateOptions.
+
+Only components present in the discovery results may be selected. An empty selection is rejected. The selected packages are downloaded, verified, staged and installed using the existing backup/rollback policy.
 
 ## Update request
 
@@ -114,6 +138,6 @@ The following existing APIs remain available in 1.x:
 - Updater::install
 - Updater::update_from_github
 
-The high-level Updater::update should be preferred for direct single-package updates. For workflows that inspect multiple components before installing, use Updater::discover_updates first.
+The high-level Updater::update should be preferred for direct single-package updates. For workflows that inspect multiple components before installing, use Updater::discover_updates followed by UpdateSelection and Updater::update_selected.
 
 The exact-asset GitHub API remains available for applications that need explicit asset selection.
