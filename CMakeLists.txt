@@ -128,10 +128,6 @@ if(BUILD_TESTING)
 
     add_executable(openupdater_sha256_tests tests/sha256_tests.cpp)
     target_link_libraries(openupdater_sha256_tests PRIVATE openupdater_core)
-    add_test(NAME openupdater_sha256_tests COMMAND openupdater_tests)
-
-    add_executable(openupdater_sha256_tests tests/sha256_tests.cpp)
-    target_link_libraries(openupdater_sha256_tests PRIVATE openupdater_core)
     add_test(NAME openupdater_sha256_tests COMMAND openupdater_sha256_tests)
 
     add_executable(openupdater_backup_tests tests/backup_tests.cpp)
