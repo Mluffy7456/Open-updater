@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <algorithm>
 
 namespace openupdater {
 
@@ -198,7 +199,7 @@ GitHubRelease GitHubReleasesProvider::latest(
         HttpHeaders headers{
             {"Accept", "application/vnd.github+json"},
             {"X-GitHub-Api-Version", "2026-03-10"},
-            {"User-Agent", "OpenUpdater/1.0"}};
+            {"User-Agent", "OpenUpdater/1.1"}};
         headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
 
         Downloader::download(api_url, metadata_path, headers);
@@ -244,6 +245,107 @@ GitHubRelease GitHubReleasesProvider::latest(
 
         throw std::runtime_error(
             "GitHub release asset not found: " + asset_name);
+    } catch (...) {
+        cleanup();
+        throw;
+    }
+}
+
+
+GitHubRelease GitHubReleasesProvider::latest_compatible(
+    const std::string& repository,
+    const std::string& component,
+    Platform platform,
+    Architecture architecture,
+    const ApiHttpHeaders& custom_headers) {
+
+    validate_repository(repository);
+
+    if (component.empty())
+        throw std::invalid_argument("GitHub component name cannot be empty.");
+
+    if (platform == Platform::Unknown || architecture == Architecture::Unknown)
+        throw std::invalid_argument(
+            "Cannot select a compatible asset for an unknown platform or architecture.");
+
+    const auto metadata_path = make_temp_path();
+    const auto cleanup = [&]() {
+        std::error_code error;
+        std::filesystem::remove(metadata_path, error);
+    };
+
+    try {
+        const auto api_url =
+            "https://api.github.com/repos/" + repository + "/releases/latest";
+
+        HttpHeaders headers{
+            {"Accept", "application/vnd.github+json"},
+            {"X-GitHub-Api-Version", "2026-03-10"},
+            {"User-Agent", "OpenUpdater/1.1"}};
+        headers.insert(headers.end(), custom_headers.begin(), custom_headers.end());
+
+        Downloader::download(api_url, metadata_path, headers);
+
+        std::ifstream input(metadata_path, std::ios::binary);
+        if (!input)
+            throw std::runtime_error("Cannot open GitHub release metadata.");
+
+        const std::string json{
+            std::istreambuf_iterator<char>(input),
+            std::istreambuf_iterator<char>()};
+
+        const auto tag = json_string(json, "tag_name");
+        if (tag.empty())
+            throw std::runtime_error("GitHub release has no tag_name.");
+
+        const Version version(tag);
+        if (!version.valid())
+            throw std::runtime_error(
+                "GitHub release tag is not a valid version: " + tag);
+
+        const std::string prefix = component + "-";
+        std::vector<GitHubRelease> matches;
+
+        for (const auto object : asset_objects(json)) {
+            const std::string object_json(object);
+            const auto name = json_string(object_json, "name");
+
+            if (name.size() <= prefix.size() ||
+                name.compare(0, prefix.size(), prefix) != 0 ||
+                !asset_matches_platform(name, platform, architecture)) {
+                continue;
+            }
+
+            const auto url = json_string(object_json, "browser_download_url");
+            if (url.empty())
+                throw std::runtime_error(
+                    "GitHub compatible asset has no browser_download_url.");
+
+            auto digest = json_string(object_json, "digest");
+            if (digest.rfind("sha256:", 0) == 0)
+                digest.erase(0, 7);
+            else
+                digest.clear();
+
+            matches.push_back({version, tag, name, url, digest});
+        }
+
+        if (matches.empty()) {
+            throw std::runtime_error(
+                "No compatible GitHub asset found for " +
+                std::string(platform_name(platform)) + "-" +
+                std::string(architecture_name(architecture)) +
+                " and component " + component + ".");
+        }
+
+        if (matches.size() > 1) {
+            throw std::runtime_error(
+                "Multiple compatible GitHub assets found for component " +
+                component + "; use the exact asset API.");
+        }
+
+        cleanup();
+        return matches.front();
     } catch (...) {
         cleanup();
         throw;
