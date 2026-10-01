@@ -1,6 +1,7 @@
 #include "openupdater/core/updater.hpp"
 
 #include "openupdater/core/backup.hpp"
+#include "openupdater/core/github.hpp"
 
 #include <array>
 #include <chrono>
@@ -71,7 +72,7 @@ void download_windows(
     }
 
     HINTERNET session = WinHttpOpen(
-        L"OpenUpdater/0.4.0",
+        L"OpenUpdater/0.5.0",
         WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
         WINHTTP_NO_PROXY_NAME,
         WINHTTP_NO_PROXY_BYPASS,
@@ -349,4 +350,60 @@ std::filesystem::path Updater::install(
         throw;
     }
 }
+
+UpdateResult Updater::update_from_github(
+    const Version& current,
+    const std::string& repository,
+    const std::string& asset_name,
+    const std::filesystem::path& destination,
+    const std::string& expected_sha256) {
+
+    if (!current.valid())
+        throw std::runtime_error("Current version is invalid.");
+
+    const auto release =
+        GitHubReleasesProvider::latest(repository, asset_name);
+
+    if (release.version <= current)
+        return {current, release.version, UpdateState::UpToDate, {}};
+
+    const auto staging_directory =
+        destination / ".openupdater" / "staging";
+    std::filesystem::create_directories(staging_directory);
+
+    const auto stamp =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const auto package_path =
+        staging_directory /
+        (asset_name + "." + std::to_string(stamp) + ".download");
+
+    const auto digest = expected_sha256.empty()
+        ? release.sha256
+        : expected_sha256;
+
+    try {
+        GitHubReleasesProvider::download_latest(
+            repository,
+            asset_name,
+            package_path,
+            digest);
+
+        const auto backup = install(package_path, destination, digest);
+
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+
+        return {
+            current,
+            release.version,
+            UpdateState::UpdateAvailable,
+            backup
+        };
+    } catch (...) {
+        std::error_code cleanup_error;
+        std::filesystem::remove(package_path, cleanup_error);
+        throw;
+    }
+}
+
 } // namespace openupdater
