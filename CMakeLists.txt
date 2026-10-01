@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 0.4.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,4 +48,8 @@ if(BUILD_TESTING)
     add_executable(openupdater_backup_tests tests/backup_tests.cpp)
     target_link_libraries(openupdater_backup_tests PRIVATE openupdater_core)
     add_test(NAME openupdater_backup_tests COMMAND openupdater_backup_tests)
+
+    add_executable(openupdater_update_tests tests/update_tests.cpp)
+    target_link_libraries(openupdater_update_tests PRIVATE openupdater_core)
+    add_test(NAME openupdater_update_tests COMMAND openupdater_update_tests)
 endif()
