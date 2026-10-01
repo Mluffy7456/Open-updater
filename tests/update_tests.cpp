@@ -1,20 +1,33 @@
+#include "openupdater/core/api.hpp"
+#include "openupdater/core/error.hpp"
 #include "openupdater/core/updater.hpp"
 
 #include <cassert>
-#include <filesystem>
 
 int main() {
     using namespace openupdater;
 
-    const auto current = Version("1.2.0");
+    static_assert(API_VERSION_MAJOR == 1);
+    static_assert(API_VERSION_MINOR == 0);
+    static_assert(API_VERSION_PATCH == 0);
+
+    const UpdateRequest request{
+        Version("1.2.0"),
+        "owner/repository",
+        "DemoApp-1.3.0.zip",
+        "./updates",
+        "",
+        {}
+    };
+
+    assert(request.current.valid());
+    assert(request.options.backup_existing);
+    assert(request.options.automatic_rollback);
+    assert(request.options.verify_download);
+
     const auto available = Version("1.3.0");
-
-    assert(current.valid());
-    assert(available.valid());
-    assert(available > current);
-
     const auto check = UpdateCheck{
-        current,
+        request.current,
         available,
         UpdateState::UpdateAvailable
     };
@@ -28,7 +41,54 @@ int main() {
     };
 
     assert(up_to_date.state == UpdateState::UpToDate);
-    assert(std::filesystem::path{}.empty());
+
+    bool caught = false;
+    try {
+        Updater::update(UpdateRequest{
+            Version("not-a-version"),
+            "owner/repository",
+            "DemoApp.zip",
+            "./updates",
+            "",
+            {}
+        });
+    } catch (const UpdateError& error) {
+        caught = true;
+        assert(error.code() == ErrorCode::InvalidVersion);
+    }
+    assert(caught);
+
+    caught = false;
+    try {
+        Updater::update(UpdateRequest{
+            Version("1.0.0"),
+            "invalid",
+            "DemoApp.zip",
+            "./updates",
+            "",
+            {}
+        });
+    } catch (const UpdateError& error) {
+        caught = true;
+        assert(error.code() == ErrorCode::InvalidArgument);
+    }
+    assert(caught);
+
+    caught = false;
+    try {
+        Updater::update(UpdateRequest{
+            Version("1.0.0"),
+            "owner/repository",
+            "DemoApp.zip",
+            {},
+            "",
+            {}
+        });
+    } catch (const UpdateError& error) {
+        caught = true;
+        assert(error.code() == ErrorCode::InvalidArgument);
+    }
+    assert(caught);
 
     return 0;
 }
