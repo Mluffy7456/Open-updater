@@ -601,6 +601,7 @@ std::vector<UpdateReport> Updater::update_selected(
 
             std::error_code cleanup_error;
             std::filesystem::remove(package_path, cleanup_error);
+            std::filesystem::remove(signature_path, cleanup_error);
 
             reports.push_back({
                 update->current,
@@ -681,7 +682,6 @@ UpdateResult Updater::update_from_github(
 
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
-        std::filesystem::remove(signature_path, cleanup_error);
 
         return {
             current,
