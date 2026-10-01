@@ -16,7 +16,8 @@ void print_usage() {
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
-        << "  openupdater install <package> <destination> [sha256]\n        << "  openupdater rollback <backup> <destination>\n"
+        << "  openupdater install <package> <destination> [sha256]\n"
+        << "  openupdater rollback <backup> <destination>\n"
         << "  openupdater verify <package> <sha256>\n"
         << "  openupdater download <url> <destination>\n"
         << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n";
