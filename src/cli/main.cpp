@@ -12,7 +12,7 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 0.5.0\n"
+        << "OpenUpdater 1.0.0\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
@@ -167,12 +167,16 @@ int main(int argc, char* argv[]) {
                 remaining == 5 ? argv[first_argument + 4] : "";
 
             const openupdater::Version current(argv[first_argument]);
-            const auto result = openupdater::Updater::update_from_github(
+            openupdater::UpdateRequest request{
                 current,
                 argv[first_argument + 1],
                 argv[first_argument + 2],
                 argv[first_argument + 3],
-                expected_sha256);
+                expected_sha256,
+                {}
+            };
+
+            const auto result = openupdater::Updater::update(request);
 
             if (result.state == openupdater::UpdateState::UpToDate) {
                 if (!silent)
