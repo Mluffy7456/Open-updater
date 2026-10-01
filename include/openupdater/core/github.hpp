@@ -1,5 +1,6 @@
 #pragma once
 
+#include "openupdater/core/api.hpp"
 #include "openupdater/core/version.hpp"
 
 #include <filesystem>
@@ -19,13 +20,15 @@ class GitHubReleasesProvider {
 public:
     [[nodiscard]] static GitHubRelease latest(
         const std::string& repository,
-        const std::string& asset_name);
+        const std::string& asset_name,
+        const ApiHttpHeaders& headers = {});
 
     static GitHubRelease download_latest(
         const std::string& repository,
         const std::string& asset_name,
         const std::filesystem::path& destination,
-        const std::string& expected_sha256 = {});
+        const std::string& expected_sha256 = {},
+        const ApiHttpHeaders& headers = {});
 };
 
 } // namespace openupdater
