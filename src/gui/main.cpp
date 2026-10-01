@@ -22,7 +22,7 @@ namespace {
 class MainWindow final : public QMainWindow {
 public:
     MainWindow() {
-        setWindowTitle("OpenUpdater 1.0.0");
+        setWindowTitle("OpenUpdater 1.1.0");
         resize(760, 520);
 
         auto* central = new QWidget(this);
@@ -33,7 +33,7 @@ public:
 
         current_ = new QLineEdit("1.0.0", config_box);
         repository_ = new QLineEdit("owner/repository", config_box);
-        asset_ = new QLineEdit("DemoApp-1.0.0.zip", config_box);
+        asset_ = new QLineEdit("DemoApp-windows-x64.zip", config_box);
         destination_ = new QLineEdit("./updates", config_box);
         digest_ = new QLineEdit(config_box);
         digest_->setPlaceholderText("Optional SHA-256");
