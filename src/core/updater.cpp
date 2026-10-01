@@ -5,6 +5,7 @@
 #include "openupdater/core/error.hpp"
 
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <algorithm>
@@ -376,6 +377,30 @@ UpdateCheck Updater::check(const Version& current, const Manifest& manifest) {
 
 namespace {
 
+std::string read_signature(
+    const std::filesystem::path& path) {
+
+    std::ifstream input(path);
+    if (!input)
+        throw std::runtime_error(
+            "Cannot open signature file: " + path.string());
+
+    std::string value(
+        std::istreambuf_iterator<char>(input),
+        std::istreambuf_iterator<char>());
+
+    value.erase(
+        std::remove_if(
+            value.begin(),
+            value.end(),
+            [](unsigned char character) {
+                return std::isspace(character) != 0;
+            }),
+        value.end());
+
+    return value;
+}
+
 std::filesystem::path install_package(
     const std::filesystem::path& package,
     const std::filesystem::path& destination,
@@ -512,6 +537,10 @@ std::vector<UpdateReport> Updater::update_selected(
 
         const auto digest = update->sha256;
 
+        const auto signature_path =
+            staging_directory /
+            (update->asset + "." + std::to_string(stamp) + ".sig");
+
         HttpHeaders headers(
             request.options.headers.begin(),
             request.options.headers.end());
@@ -530,6 +559,35 @@ std::vector<UpdateReport> Updater::update_selected(
                     ErrorCode::VerificationFailed,
                     "SHA-256 verification failed for selected update: " +
                     update->component);
+            }
+
+            if (request.options.verify_signature) {
+                if (request.options.trusted_public_key.empty())
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "Trusted Ed25519 public key is required for signature verification.");
+
+                if (update->signature_url.empty())
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "Selected update has no detached signature asset: " +
+                        update->component);
+
+                Downloader::download(
+                    update->signature_url,
+                    signature_path,
+                    headers);
+
+                const auto signature = read_signature(signature_path);
+                if (!SignatureVerifier::verify_ed25519_sha256(
+                        package_path,
+                        signature,
+                        request.options.trusted_public_key)) {
+                    throw UpdateError(
+                        ErrorCode::VerificationFailed,
+                        "Ed25519 signature verification failed for selected update: " +
+                        update->component);
+                }
             }
 
             const auto install_digest =
@@ -554,10 +612,12 @@ std::vector<UpdateReport> Updater::update_selected(
         } catch (const UpdateError&) {
             std::error_code cleanup_error;
             std::filesystem::remove(package_path, cleanup_error);
+            std::filesystem::remove(signature_path, cleanup_error);
             throw;
         } catch (const std::exception& error) {
             std::error_code cleanup_error;
             std::filesystem::remove(package_path, cleanup_error);
+            std::filesystem::remove(signature_path, cleanup_error);
             throw UpdateError(
                 ErrorCode::InstallationFailed,
                 "Failed to install selected update " +
@@ -621,6 +681,7 @@ UpdateResult Updater::update_from_github(
 
         std::error_code cleanup_error;
         std::filesystem::remove(package_path, cleanup_error);
+        std::filesystem::remove(signature_path, cleanup_error);
 
         return {
             current,
@@ -718,6 +779,57 @@ UpdateReport Updater::update(const UpdateRequest& request) {
         throw UpdateError(
             ErrorCode::VerificationFailed,
             "Downloaded GitHub asset SHA-256 verification failed.");
+    }
+
+    const auto signature_path =
+        staging_directory /
+        (request.asset_name + "." + std::to_string(stamp) + ".sig");
+
+    if (request.options.verify_signature) {
+        if (request.options.trusted_public_key.empty()) {
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+            throw UpdateError(
+                ErrorCode::VerificationFailed,
+                "Trusted Ed25519 public key is required for signature verification.");
+        }
+
+        if (release.signature_url.empty()) {
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+            throw UpdateError(
+                ErrorCode::VerificationFailed,
+                "GitHub release has no detached signature asset.");
+        }
+
+        try {
+            Downloader::download(
+                release.signature_url,
+                signature_path,
+                headers);
+
+            const auto signature = read_signature(signature_path);
+            if (!SignatureVerifier::verify_ed25519_sha256(
+                    package_path,
+                    signature,
+                    request.options.trusted_public_key)) {
+                std::error_code cleanup_error;
+                std::filesystem::remove(package_path, cleanup_error);
+                std::filesystem::remove(signature_path, cleanup_error);
+                throw UpdateError(
+                    ErrorCode::VerificationFailed,
+                    "Downloaded GitHub asset Ed25519 signature verification failed.");
+            }
+        } catch (const UpdateError&) {
+            throw;
+        } catch (const std::exception& error) {
+            std::error_code cleanup_error;
+            std::filesystem::remove(package_path, cleanup_error);
+            std::filesystem::remove(signature_path, cleanup_error);
+            throw UpdateError(
+                ErrorCode::VerificationFailed,
+                error.what());
+        }
     }
 
     try {
