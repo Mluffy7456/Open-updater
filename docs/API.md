@@ -1,4 +1,4 @@
-# OpenUpdater 1.0 API
+# OpenUpdater 1.1 API
 
 OpenUpdater 1.0 exposes a stable C++20 core API. The GUI and CLI are clients of the same core library.
 
@@ -11,7 +11,15 @@ Use the compile-time API version constants:
     openupdater::API_VERSION_PATCH
     openupdater::API_VERSION
 
-The 1.0 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+The 1.1 API is intended to remain source-compatible across 1.x releases unless a documented deprecation is introduced.
+
+## Platform and architecture
+
+The core exposes `Platform` and `Architecture` enums plus `current_platform()` and `current_architecture()` for runtime host detection.
+
+`platform_name()` and `architecture_name()` return stable lowercase identifiers such as `windows`, `linux`, `macos`, `x64` and `arm64`.
+
+`GitHubReleasesProvider::latest_compatible(...)` selects an asset using the convention `<component>-<platform>-<architecture>.<extension>`. It rejects unknown host information and ambiguous multiple matches rather than silently selecting an arbitrary package.
 
 ## Update request
 
@@ -77,3 +85,5 @@ The following existing APIs remain available in 1.0:
 - Updater::update_from_github
 
 The high-level Updater::update should be preferred for new integrations.
+
+The exact-asset GitHub API remains available for applications that need explicit asset selection.
