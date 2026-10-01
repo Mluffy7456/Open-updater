@@ -4,7 +4,7 @@ Open-source, cross-platform application updater written in modern C++20.
 
 ## Status
 
-v2.0.0 — Full update manager
+v2.1.0 — Windows desktop GUI
 
 Features:
 - semantic numeric version comparison;
@@ -18,7 +18,7 @@ Features:
 - rollback of a previous installation;
 - unattended update flow from GitHub Releases;
 - silent CLI mode for automation/background execution;
-- optional Qt 6 desktop GUI;
+- Qt 6 desktop GUI with asynchronous update operations;\n- vector OpenUpdater application icon embedded in the desktop GUI and Windows installer;
 - stable C++20 high-level updater API;
 - typed updater errors via UpdateError;
 - configurable backup, rollback and verification policy;
@@ -51,8 +51,8 @@ Build:
     cmake --build build --config Release
     ctest --test-dir build -C Release --output-on-failure
 
-## CLI
-
+## Desktop GUI
+\nThe Qt 6 desktop application is the primary Windows user interface. It provides GitHub release configuration, update checks, asynchronous installation, status reporting, and the same C++20 updater core used by the CLI.\n\nOn Windows, the installer includes the Qt runtime and the GUI executable `openupdater.exe`. The command-line tool is installed separately as `openupdater-cli.exe`.\n\nThe GUI uses the vector asset `assets/openupdater.svg` for its application icon.\n\n## CLI\n
 Check a version:
 
     openupdater version 1.2.3
@@ -252,7 +252,7 @@ Component sections are optional and extend the same manifest format.
 - 1.2.0 — Update discovery
 - 1.3.0 — Update selection and selective installation
 - 1.4.0 — Ed25519 package signature verification
-- 2.0.0 — Full update manager
+- 2.0.0 — Full update manager\n- 2.1.0 — Windows desktop GUI and packaged Qt runtime
 
 
 ### v2.0 API example
