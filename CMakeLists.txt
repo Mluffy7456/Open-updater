@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OpenUpdater VERSION 2.1.0 LANGUAGES CXX)
+project(OpenUpdater VERSION 2.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,13 +26,16 @@ add_library(openupdater_core
     src/core/updater.cpp
     src/core/platform.cpp
     src/core/signature.cpp
+    src/core/universal.cpp
+    src/providers/winget.cpp
+    src/providers/windows_update.cpp
 )
 
 target_include_directories(openupdater_core PUBLIC include)
 target_link_libraries(openupdater_core PRIVATE OpenSSL::Crypto)
 
 if(WIN32)
-    target_link_libraries(openupdater_core PRIVATE winhttp)
+    target_link_libraries(openupdater_core PRIVATE winhttp ole32 oleaut32 wuapi)
 else()
     target_link_libraries(openupdater_core PRIVATE CURL::libcurl)
 endif()
