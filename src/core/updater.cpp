@@ -385,9 +385,9 @@ std::string read_signature(
         throw std::runtime_error(
             "Cannot open signature file: " + path.string());
 
-    std::string value(
+    std::string value{
         std::istreambuf_iterator<char>(input),
-        std::istreambuf_iterator<char>());
+        std::istreambuf_iterator<char>()};
 
     value.erase(
         std::remove_if(
