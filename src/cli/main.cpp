@@ -12,13 +12,13 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "OpenUpdater 1.1.0\n"
+        << "OpenUpdater 1.4.0\n"
         << "Usage:\n"
         << "  openupdater version <version>\n"
         << "  openupdater check <current-version> <manifest>\n"
         << "  openupdater install <package> <destination> [sha256]\n"
         << "  openupdater rollback <backup> <destination>\n"
-        << "  openupdater verify <package> <sha256>\n"
+        << "  openupdater verify <package> <sha256>\n  openupdater verify-signature <package> <signature-hex> <public-key-hex>\n"
         << "  openupdater download <url> <destination>\n"
         << "  openupdater github <owner/repository> <asset> <destination> [sha256]\n"
         << "  openupdater update [--silent] <current-version> <owner/repository> <asset> <destination> [sha256]\n";
@@ -144,6 +144,22 @@ int main(int argc, char* argv[]) {
             }
 
             std::cout << "SHA-256 verification passed.\n";
+            return 0;
+        }
+
+        if (command == "verify-signature") {
+            if (argc != 5) {
+                print_usage();
+                return 1;
+            }
+
+            if (!openupdater::SignatureVerifier::verify_ed25519_sha256(
+                    argv[2], argv[3], argv[4])) {
+                std::cerr << "Ed25519 signature verification failed.\n";
+                return 3;
+            }
+
+            std::cout << "Ed25519 signature verification passed.\n";
             return 0;
         }
 
