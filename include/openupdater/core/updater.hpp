@@ -3,6 +3,7 @@
 #include "openupdater/core/manifest.hpp"
 
 #include <filesystem>
+#include <string>
 
 namespace openupdater {
 
@@ -15,6 +16,13 @@ struct UpdateCheck {
     Version current;
     Version available;
     UpdateState state;
+};
+
+class Downloader {
+public:
+    static void download(
+        const std::string& url,
+        const std::filesystem::path& destination);
 };
 
 class Updater {
