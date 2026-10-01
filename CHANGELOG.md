@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0] - 2026-10-01
+
+### Added
+- Backup manager for installed packages.
+- Staged installation through a temporary file.
+- Automatic backup before replacing an existing package.
+- Automatic rollback attempt when activation fails.
+- CLI `rollback` command.
+- Backup and rollback unit tests.
+
+### Changed
+- `Updater::install` now returns the created backup path when an existing package was replaced.
+- Windows WinHTTP User-Agent updated to OpenUpdater 0.4.0.
+
 ## [0.3.0] - 2026-10-01
 
 ### Added
