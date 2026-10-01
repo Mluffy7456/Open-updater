@@ -249,10 +249,14 @@ UpdateCheck Updater::check(const Version& current, const Manifest& manifest) {
 
 void Updater::install(
     const std::filesystem::path& package,
-    const std::filesystem::path& destination) {
+    const std::filesystem::path& destination,
+    const std::string& expected_sha256) {
 
     if (!std::filesystem::exists(package))
         throw std::runtime_error("Package does not exist: " + package.string());
+
+    if (!expected_sha256.empty() && !verify_sha256(package, expected_sha256))
+        throw std::runtime_error("Package SHA-256 verification failed.");
 
     std::filesystem::create_directories(destination);
 
